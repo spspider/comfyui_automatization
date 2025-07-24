@@ -5,7 +5,7 @@ import os
 # Настройки
 LMSTUDIO_API = "http://localhost:1234/v1/chat/completions"
 model_key = "qwen2-vl-2b-instruct"
-image_path = os.path.abspath("inputs/new_input.png")
+image_path = os.path.abspath("gen/input.jpeg")
 
 user_prompt = "Describe this image in detail."
 system_prompt = (
@@ -17,7 +17,7 @@ system_prompt = (
 with open(image_path, "rb") as img_file:
     image_bytes = img_file.read()
     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-    image_data_url = f"data:image/png;base64,{image_base64}"
+    image_data_url = f"data:image/jpeg;base64,{image_base64}"
 
 # Формируем запрос
 payload = {
