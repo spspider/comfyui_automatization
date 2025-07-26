@@ -9,7 +9,7 @@ from pathlib import Path
 from moviepy import concatenate_videoclips, VideoFileClip
 
 from provider_all import generate_response_allmy
-from text2video_workflow import run_text2video
+from text2video_wan2_1 import run_text2video
 from video2audio_workflow import run_video2audio
 import pprint
 
@@ -19,12 +19,12 @@ RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 async def generate_story(provider="DeepSeek-r1"):
     prompt = (
-        "You are a viral video content creator. Generate a complete and structured script for a 1-minute video.\n"
+        "You are a viral video content creator. Generate a mostly trending video scene, which is best of the popular right now, in 2025 complete and structured script for a 1-minute video.\n"
         "Respond using the exact format below for each scene:\n"
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
-        "**Visual:** Describe the scene.\n"
+        "**Visual:** Describe the scene. Describe as much detail as possible.\n"
         "**Sound:** Describe the sound or music.\n"
         "**Text:** On-screen text or captions (if any).\n"
         "---\n"
@@ -61,6 +61,7 @@ def fetch_and_prepare_clip(exts=(".webm", ".mp4", ".webp")):
     files = []
     for ext in exts:
         files += list(COMFY_OUTPUT_DIR.glob(f"ComfyUI_*{ext}"))
+        files += list(COMFY_OUTPUT_DIR.glob(f"wan_*{ext}"))
     if not files:
         return None
     latest = max(files, key=lambda f: f.stat().st_mtime)
@@ -68,6 +69,46 @@ def fetch_and_prepare_clip(exts=(".webm", ".mp4", ".webp")):
     shutil.copy(latest, dest)
     return dest
 
+def convert_to_mp4(source_path, duration=3):
+    """
+    Конвертирует любой WebP/WebM/прочий видеоформат в MP4.
+    Для WebP — если анимированный, FFmpeg сам читает все кадры.
+    Если статичный — будет один кадр в видео продолжительностью duration.
+    """
+    dest = Path(source_path).with_suffix(".mp4")
+    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
+    try:
+        # Универсальный вызов для всего: WebP, WebM и пр.
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-i", str(source_path),
+        ]
+
+        # Если это статичная WebP — зациклить на duration секунд
+        if source_path.suffix.lower() == ".webp":
+            # попробуем проверить, статичная ли WebP
+            with open(source_path, "rb") as f:
+                header = f.read(4096)
+            if b"ANIM" not in header:
+                cmd += ["-loop", "1", "-t", str(duration)]
+
+        cmd += [
+            "-vf", "format=yuv420p",
+            "-c:v", "libx264",
+            str(dest)
+        ]
+        subprocess.run(cmd, check=True)
+        source_path.unlink()
+        return dest
+
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Не удалось конвертировать {source_path.name} в mp4:\n{e}")
+        return None
+
+
+
+    
 def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
     video_paths = []
     for idx, blk in enumerate(blocks, 1):
@@ -75,25 +116,31 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
         run_text2video(blk['visual'], negative_prompt)
         clip = fetch_and_prepare_clip()
         if clip:
-            ordered = RESULT_DIR / f"scene_{idx:02d}{clip.suffix}"
-            clip.rename(ordered)
-            video_paths.append(str(ordered))
-        else:
-            print(f"⚠️ No clip found for scene {idx}")
+            video_paths.append(str(clip))
+        #    converted = convert_to_mp4(clip)
+        #     if converted:
+        #         ordered = RESULT_DIR / f"scene_{idx:02d}.mp4"
+        #         shutil.move(str(converted), str(ordered))
+        #         video_paths.append(str(ordered))
+        #     else:
+        #         print(f"⚠️ Failed to convert video for scene {idx}")
+        # else:
+        #     print(f"⚠️ No clip found for scene {idx}")
     return video_paths
 
-def add_audio_to_scenes(video_paths, negative_prompt="low quality, noise"):
+def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise"):
     audio_video_paths = []
-    for path in video_paths:
-        print(f"Adding audio to {path}")
-        run_video2audio(video_path=path, prompt="", negative_prompt=negative_prompt)
-        clip = fetch_and_prepare_clip(exts=(".mp4",))
-        if clip:
-            newname = RESULT_DIR / (Path(path).stem + "_audio" + clip.suffix)
-            clip.rename(newname)
+    for idx, (video_path, blk) in enumerate(zip(video_paths, blocks), 1):
+        print(f"🔊 Adding audio to {video_path}")
+        run_video2audio(video_path=video_path, prompt=blk['sound'], negative_prompt=negative_prompt)
+        audio_clip = fetch_and_prepare_clip(exts=(".mp4",))
+        if audio_clip:
+            newname = RESULT_DIR / f"scene_{idx:02d}_audio.mp4"
+            shutil.move(str(audio_clip), str(newname))
             audio_video_paths.append(str(newname))
         else:
-            audio_video_paths.append(path)
+            print(f"⚠️ No audio clip found for scene {idx}, using original.")
+            audio_video_paths.append(video_path)
     return audio_video_paths
 
 def combine_videos(video_list, output_path="final_movie.mp4"):
@@ -136,10 +183,8 @@ async def main():
     print(f"Parsed {len(blocks)} scenes.")
     pprint.pprint(blocks, sort_dicts=False, indent=2)
     vids = generate_videos(blocks)
-    # if args.use_audio:
-    #     vids = add_audio_to_scenes(vids)
+    vids = add_audio_to_scenes(vids, blocks)
     # combine_videos(vids)
 
 if __name__ == '__main__':
     asyncio.run(main())
-    # add_audio_to_scenes()
