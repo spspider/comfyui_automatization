@@ -12,10 +12,13 @@ from provider_all import generate_response_allmy
 from text2video_wan2_1 import run_text2video
 from video2audio_workflow import run_video2audio
 import pprint
+from tempfile import NamedTemporaryFile
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
+
+from subtitles import format_time, generate_subtitles, ffmpeg_safe_path, burn_subtitles
 
 async def generate_story(provider="DeepSeek-r1"):
     prompt = (
@@ -183,7 +186,8 @@ async def main():
     print(f"Parsed {len(blocks)} scenes.")
     pprint.pprint(blocks, sort_dicts=False, indent=2)
     vids = generate_videos(blocks)
-    vids = add_audio_to_scenes(vids, blocks)
+    vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
+    # vids = add_audio_to_scenes(vids, blocks)
     # combine_videos(vids)
 
 if __name__ == '__main__':
