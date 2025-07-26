@@ -65,11 +65,16 @@ def fetch_and_prepare_clip(exts=(".webm", ".mp4", ".webp")):
     for ext in exts:
         files += list(COMFY_OUTPUT_DIR.glob(f"ComfyUI_*{ext}"))
         files += list(COMFY_OUTPUT_DIR.glob(f"wan_*{ext}"))
+        files += list(COMFY_OUTPUT_DIR.glob(f"MMaudio_*{ext}"))
     if not files:
         return None
     latest = max(files, key=lambda f: f.stat().st_mtime)
     dest = RESULT_DIR / latest.name
     shutil.copy(latest, dest)
+    try:
+        os.remove(latest)
+    except Exception as e:
+        print(f"⚠️ Could not delete source file {latest}: {e}")
     return dest
 
 def convert_to_mp4(source_path, duration=3):
@@ -116,7 +121,10 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
     video_paths = []
     for idx, blk in enumerate(blocks, 1):
         print(f"[Scene {idx}] Generating: {blk['title']}")
-        run_text2video(blk['visual'], negative_prompt)
+        duration = blk.get('duration', 10)
+        if not isinstance(duration, int) or duration > 10 or duration <= 0:
+            duration = 10
+        run_text2video(blk['visual'], negative_prompt, video_seconds=duration)
         clip = fetch_and_prepare_clip()
         if clip:
             video_paths.append(str(clip))
@@ -177,9 +185,8 @@ async def main():
     p.add_argument('--use_audio', action='store_true')
     args = p.parse_args()
 
-
-    # blocks = await get_story_blocks_with_retries(args.provider, RESULT_DIR)
-    blocks = (parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8")))
+    blocks = await get_story_blocks_with_retries(args.provider, RESULT_DIR)
+    # blocks = (parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8")))
     if not blocks:
         return
 
@@ -187,8 +194,8 @@ async def main():
     pprint.pprint(blocks, sort_dicts=False, indent=2)
     vids = generate_videos(blocks)
     vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
-    # vids = add_audio_to_scenes(vids, blocks)
-    # combine_videos(vids)
+    vids = add_audio_to_scenes(vids, blocks)
+    combine_videos(vids)
 
 if __name__ == '__main__':
     asyncio.run(main())
