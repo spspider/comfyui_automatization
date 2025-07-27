@@ -1,4 +1,5 @@
 
+import gc
 import os
 import re
 import argparse
@@ -17,6 +18,8 @@ COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
+DEBUG = 'audio'
+
 from subtitles import format_time, generate_subtitles, ffmpeg_safe_path, burn_subtitles
 
 async def generate_story(provider="qwen"):
@@ -31,11 +34,11 @@ async def generate_story(provider="qwen"):
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
-        "**Visual:** Describe the scene. Describe as much detail as possible.\n"
+        "**Visual:** Describe the scene. Describe as much detail as possible. at least 5-10 sentences including background and foreground.\n"
         "**Sound:** Describe the sound or music.\n"
         "**Text:** On-screen text or captions (if any).\n"
         "---\n"
-        "Repeat this for each 5-15 second segment of the 1-minute story.\n"
+        "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
         "Ensure all timestamps are accurate and the output matches this exact format."
     )
     return await generate_response_allmy(provider, prompt)
@@ -43,7 +46,7 @@ async def generate_story(provider="qwen"):
 def parse_story_blocks(story_text):
     meta = {}
     meta_match = re.search(
-        r"\*\*VIDEO_Title:\*\*\s*(.*?)\s*\*\*VIDEO_Description:\*\*\s*(.*?)\s*\*\*VIDEO_Hashtags:\*\*\s*(.*?)\s*",
+        r'\*\*VIDEO_Title:\*\*\s*(.*?)\s*\*\*VIDEO_Description:\*\*\s*(.*?)\s*\*{2}VIDEO_Hashtags:\*\*\s*(.*?)\s*',
         story_text,
         re.DOTALL
     )
@@ -55,17 +58,20 @@ def parse_story_blocks(story_text):
         }
 
     pattern = re.compile(
-        r"\*\*\[(\d{1,2}:\d{2})-(\d{1,2}:\d{2})\]\*\*\s*"
-        r"\*\*Title:\*\*\s*(.*?)\s*"
-        r"\*\*Visual:\*\*\s*(.*?)\s*"
-        r"\*\*Sound:\*\*\s*(.*?)\s*"
-        r"\*\*Text:\*\*\s*(.*?)\s*",
+        r'\*\*\[(\d{2}:\d{2})-(\d{2}:\d{2})\]\*\*\s*'
+        r'\*\*Title:\*\*\s*(.*?)\s*'
+        r'\*\*Visual:\*\*\s*(.*?)\s*'
+        r'\*\*Sound:\*\*\s*(.*?)\s*'
+        r'\*\*Text:\*\*\s*(.*?)(?=\n\*\*\[\d{2}:\d{2}-\d{2}:\d{2}\]\*\*|\Z)',
         re.DOTALL
     )
+
     scenes = []
     for match in pattern.findall(story_text):
         start_str, end_str, title, visual, sound, text = match
-        def to_sec(t): return int(t.split(":")[0]) * 60 + int(t.split(":")[1])
+        def to_sec(t): 
+            minutes, seconds = map(int, t.split(":"))
+            return minutes * 60 + seconds
         duration = to_sec(end_str) - to_sec(start_str)
         scenes.append({
             "title": title.strip(),
@@ -132,7 +138,10 @@ def convert_to_mp4(source_path, duration=3):
         print(f"❌ Не удалось конвертировать {source_path.name} в mp4:\n{e}")
         return None
 
-
+def list_videos_in_result():
+    result_dir = Path(r"C:/AI/comfyui_automatization/result")
+    video_extensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"]  # Add more as needed
+    return [file for file in result_dir.glob("*") if file.suffix.lower() in video_extensions]
 
     
 def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
@@ -142,8 +151,9 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
         duration = blk.get('duration', 10)
         if not isinstance(duration, int) or duration > 10 or duration <= 0:
             duration = 10
-        clip = wan_2_1_t2v_gguf_api(blk['visual'], negative_prompt, video_seconds=duration)
-        # text_to_video_wan_api_nouugf(blk['visual'], negative_prompt, video_seconds=duration)
+        # clip = wan_2_1_t2v_gguf_api(blk['visual'], negative_prompt, video_seconds=duration)
+        
+        clip = text_to_video_wan_api_nouugf(blk['visual'], negative_prompt, video_seconds=duration)
         # clip = fetch_and_prepare_clip()
         if clip:
             video_paths.append(str(clip))
@@ -202,25 +212,37 @@ async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
     return None
 
 async def main():
-    p = argparse.ArgumentParser()
-    p.add_argument('--provider', default='qwen')
-    p.add_argument('--use_audio', action='store_true')
-    args = p.parse_args()
-
-    # blocks = await get_story_blocks_with_retries(args.provider, RESULT_DIR)
-    meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+    
+    if DEBUG:
+        print("DEBUG mode: skip requesting new blocks.")
+        meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+    else:
+        meta, blocks = await get_story_blocks_with_retries(args.provider, RESULT_DIR)
     print(f"🎬 Title: {meta['video_title']}")
     print(f"📝 Description: {meta['video_description']}")
     print(f"🏷️ Hashtags: {meta['video_hashtags']}")
     if not blocks:
         return
 
+    for idx, blk in enumerate(blocks, 1):
+        print(f"[Scene {idx}]")
+        print(f"  Title: {blk.get('title')}")
+        print(f"  Visual: {blk.get('visual')}")
+        print(f"  Sound: {blk.get('sound')}")
+        print(f"  Text: {blk.get('text')}")
+        print("-" * 40)
+        
     print(f"Parsed {len(blocks)} scenes.")
-    # pprint.pprint(blocks, sort_dicts=False, indent=2)
-    vids = generate_videos(blocks)
+    if DEBUG:
+        print("DEBUG mode: skip creating videos.")
+        vids = list_videos_in_result()
+    else:
+        vids = generate_videos(blocks)
     vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
-    vids = add_audio_to_scenes(vids, blocks)
-    combine_videos(vids)
+    
+
+    # vids = add_audio_to_scenes(vids, blocks)
+    # combine_videos(vids)
 
 if __name__ == '__main__':
     asyncio.run(main())

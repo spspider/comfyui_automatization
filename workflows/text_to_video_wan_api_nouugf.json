@@ -90,7 +90,7 @@
   },
   "37": {
     "inputs": {
-      "unet_name": "wan2.1_t2v_14B_fp8_scaled.safetensors",
+      "unet_name": "wan2.1_t2v_1.3B_fp16.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
