@@ -9,10 +9,9 @@ from pathlib import Path
 from moviepy import concatenate_videoclips, VideoFileClip
 
 from provider_all import generate_response_allmy
-from text2video_wan2_1 import run_text2video
+from text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
 from video2audio_workflow import run_video2audio
-import pprint
-from tempfile import NamedTemporaryFile
+from wan_2_1_t2v_gguf_api import wan_2_1_t2v_gguf_api
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
@@ -20,10 +19,15 @@ RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 from subtitles import format_time, generate_subtitles, ffmpeg_safe_path, burn_subtitles
 
-async def generate_story(provider="DeepSeek-r1"):
+async def generate_story(provider="qwen"):
     prompt = (
         "You are a viral video content creator. Generate a mostly trending video scene, which is best of the popular right now, in 2025 complete and structured script for a 1-minute video.\n"
+        "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
         "Respond using the exact format below for each scene:\n"
+        "\n"
+        "**VIDEO_Title:** The Coffee Cup That Stole the Internet**\n"
+        "**VIDEO_Description:** A hilarious story about a mischievous coffee cup causing chaos in the office.\n"
+        "**VIDEO_Hashtags:** #Comedy #CoffeeChaos #OfficeLife\n"
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
@@ -37,28 +41,42 @@ async def generate_story(provider="DeepSeek-r1"):
     return await generate_response_allmy(provider, prompt)
 
 def parse_story_blocks(story_text):
-    pattern = re.compile(
-        r"\*\*\[(\d{1,2}:\d{2})-(\d{1,2}:\d{2})\]\*\*\s*"  # timestamps
-        r"\*\*Title:\*\*\s*(.*?)\s*"  # title
-        r"\*\*Visual:\*\*\s*(.*?)\s*"  # visual
-        r"\*\*Sound:\*\*\s*(.*?)\s*"  # sound
-        r"\*\*Text:\*\*\s*(.*?)\s*"  # text
-        r"---",
+    meta = {}
+    meta_match = re.search(
+        r"\*\*VIDEO_Title:\*\*\s*(.*?)\s*\*\*VIDEO_Description:\*\*\s*(.*?)\s*\*\*VIDEO_Hashtags:\*\*\s*(.*?)\s*",
+        story_text,
         re.DOTALL
     )
-    blocks = []
+    if meta_match:
+        meta = {
+            "video_title": meta_match.group(1).strip(),
+            "video_description": meta_match.group(2).strip(),
+            "video_hashtags": meta_match.group(3).strip()
+        }
+
+    pattern = re.compile(
+        r"\*\*\[(\d{1,2}:\d{2})-(\d{1,2}:\d{2})\]\*\*\s*"
+        r"\*\*Title:\*\*\s*(.*?)\s*"
+        r"\*\*Visual:\*\*\s*(.*?)\s*"
+        r"\*\*Sound:\*\*\s*(.*?)\s*"
+        r"\*\*Text:\*\*\s*(.*?)\s*",
+        re.DOTALL
+    )
+    scenes = []
     for match in pattern.findall(story_text):
         start_str, end_str, title, visual, sound, text = match
         def to_sec(t): return int(t.split(":")[0]) * 60 + int(t.split(":")[1])
         duration = to_sec(end_str) - to_sec(start_str)
-        blocks.append({
+        scenes.append({
             "title": title.strip(),
             "visual": visual.strip(),
             "sound": sound.strip(),
             "text": text.strip(),
             "duration": duration
         })
-    return blocks
+
+    return meta, scenes
+
 
 def fetch_and_prepare_clip(exts=(".webm", ".mp4", ".webp")):
     files = []
@@ -124,8 +142,9 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
         duration = blk.get('duration', 10)
         if not isinstance(duration, int) or duration > 10 or duration <= 0:
             duration = 10
-        run_text2video(blk['visual'], negative_prompt, video_seconds=duration)
-        clip = fetch_and_prepare_clip()
+        clip = wan_2_1_t2v_gguf_api(blk['visual'], negative_prompt, video_seconds=duration)
+        # text_to_video_wan_api_nouugf(blk['visual'], negative_prompt, video_seconds=duration)
+        # clip = fetch_and_prepare_clip()
         if clip:
             video_paths.append(str(clip))
         #    converted = convert_to_mp4(clip)
@@ -143,8 +162,8 @@ def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise
     audio_video_paths = []
     for idx, (video_path, blk) in enumerate(zip(video_paths, blocks), 1):
         print(f"🔊 Adding audio to {video_path}")
-        run_video2audio(video_path=video_path, prompt=blk['sound'], negative_prompt=negative_prompt)
-        audio_clip = fetch_and_prepare_clip(exts=(".mp4",))
+        audio_clip = run_video2audio(video_path=video_path, prompt=blk['sound'], negative_prompt=negative_prompt)
+        # audio_clip = fetch_and_prepare_clip(exts=(".mp4",))
         if audio_clip:
             newname = RESULT_DIR / f"scene_{idx:02d}_audio.mp4"
             shutil.move(str(audio_clip), str(newname))
@@ -172,7 +191,10 @@ async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
         story_file = result_dir / "story.txt"
         with open(story_file, "w", encoding="utf-8") as f:
             f.write(story)
-        blocks = parse_story_blocks(story)
+        meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+        print(f"🎬 Title: {meta['video_title']}")
+        print(f"📝 Description: {meta['video_description']}")
+        print(f"🏷️ Hashtags: {meta['video_hashtags']}")
         if blocks:
             return blocks
         print("⚠️ Parsing failed. Retrying with new prompt...")
@@ -181,17 +203,20 @@ async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
 
 async def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--provider', default='DeepSeek-r1')
+    p.add_argument('--provider', default='qwen')
     p.add_argument('--use_audio', action='store_true')
     args = p.parse_args()
 
-    blocks = await get_story_blocks_with_retries(args.provider, RESULT_DIR)
-    # blocks = (parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8")))
+    # blocks = await get_story_blocks_with_retries(args.provider, RESULT_DIR)
+    meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+    print(f"🎬 Title: {meta['video_title']}")
+    print(f"📝 Description: {meta['video_description']}")
+    print(f"🏷️ Hashtags: {meta['video_hashtags']}")
     if not blocks:
         return
 
     print(f"Parsed {len(blocks)} scenes.")
-    pprint.pprint(blocks, sort_dicts=False, indent=2)
+    # pprint.pprint(blocks, sort_dicts=False, indent=2)
     vids = generate_videos(blocks)
     vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
     vids = add_audio_to_scenes(vids, blocks)

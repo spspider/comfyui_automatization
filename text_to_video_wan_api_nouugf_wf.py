@@ -5,54 +5,52 @@ import time
 from pathlib import Path
 import shutil
 
-def run_text2video(prompt, negative_prompt, workflow_path="workflows/wan-2.1-t2v-gguf_api.json", video_seconds=5):
+
+def text_to_video_wan_api_nouugf(positive_text, negative_text, workflow_path="workflows/text_to_video_wan_api_nouugf.json", video_seconds=5):
     COMFY_URL = "http://127.0.0.1:8188"
     OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")
     RESULT_DIR = Path("result")
     RESULT_DIR.mkdir(exist_ok=True)
 
-
-    # Load API-exported workflow
+    # Configure workflow using new input names
+    FRAME_RATE = 16  # Assuming that the default frame rate is still a valid parameter
+    FRAME_COUNT = video_seconds * FRAME_RATE
+    
+   # Load API-exported workflow
     with open(workflow_path, "r", encoding="utf-8") as f:
         workflow = json.load(f)
-
-    frame_rate = workflow["48"]["inputs"].get("frame_rate", 16)
-    frame_count = video_seconds * frame_rate
-
-    # Set positive and negative prompts
+        
+    # Configure prompts
+   # Set positive and negative text based on node availability
     if "6" in workflow:
-        workflow["6"]["inputs"]["text"] = prompt
+        workflow["6"]["inputs"]["text"] = positive_text
     else:
-        raise ValueError("Node 6 (positive prompt) not found")
+        raise ValueError("Node 6 (CLIP Text Encode for Positive Prompt) not found.")
+
     if "7" in workflow:
-        workflow["7"]["inputs"]["text"] = negative_prompt
+        workflow["7"]["inputs"]["text"] = negative_text
     else:
-        raise ValueError("Node 7 (negative prompt) not found")
+        raise ValueError("Node 7 (CLIP Text Encode for Negative Prompt) not found.")
 
     if "40" in workflow:
-        workflow["40"]["inputs"]["length"] = frame_count
+        workflow["40"]["inputs"]["length"] = FRAME_COUNT
     else:
-        raise ValueError("Node 40 (EmptyHunyuanLatentVideo) not found")
-    # Set save node (VHS_VideoCombine, node 48)
-    save_node_id = "48"
-    if save_node_id in workflow:
-        # Optionally, you can adjust save node settings here if needed
-        pass
+        raise ValueError("Node 40 (Empty Hunyuan Latent Video) for video length setting not found.")
+
+    # FPS setting falls under different node. For example, it might look something like this:
+    if "28" in workflow:
+        workflow["28"]["inputs"]["fps"] = FRAME_RATE
     else:
-        raise ValueError(f"Node {save_node_id} (Save node) not found")
+        raise ValueError("Node 28 (SaveAnimatedWEBP) for setting fps not found.")
 
-    # Get filename_prefix from save node
-    filename_prefix = workflow[save_node_id]["inputs"].get("filename_prefix", "wan")
-
-
-    # Send to ComfyUI API
+    # Send to ComfyUI API (corrected endpoint key!)
+    headers = {'Content-Type': 'application/json'}
     response = requests.post(f"{COMFY_URL}/prompt", json={"prompt": workflow})
     if response.status_code != 200:
         raise RuntimeError(f"ComfyUI error: {response.status_code}\n{response.text}")
 
     prompt_id = response.json()["prompt_id"]
-    # prompt_id = "1234567890"  # Placeholder for prompt ID, replace with actual ID from your workflow
-    print(f"✅ Prompt submitted. ID: {prompt_id}")
+    print(f"✅ Workflow submitted. ID: {prompt_id}")
 
     # Wait for completion
     print("⌛ Waiting for completion...")
@@ -65,10 +63,10 @@ def run_text2video(prompt, negative_prompt, workflow_path="workflows/wan-2.1-t2v
                 break
         time.sleep(1)
 
-    # Find latest .mp4 output (VHS_VideoCombine outputs mp4 with prefix)
-    files = list(OUTPUT_DIR.glob(f"{filename_prefix}_*.mp4"))
+    # Find latest .webm output 
+    files = list(OUTPUT_DIR.glob("ComfyUI_*.webm"))
     if not files:
-        print(f"❌ No .mp4 output found with prefix {filename_prefix}.")
+        print(f"❌ No .webm output found with prefix 'ComfyUI'.")
         return None
     latest = max(files, key=lambda p: p.stat().st_mtime)
 
@@ -80,7 +78,7 @@ def run_text2video(prompt, negative_prompt, workflow_path="workflows/wan-2.1-t2v
 
 if __name__ == "__main__":
     # Example call
-    run_text2video(
+    text_to_video_wan_api_nouugf(
         "a fox moving quickly in a beautiful winter scenery nature trees sunset tracking camera",
         "Overexposure, static, blurred details, subtitles, paintings, pictures, still, overall gray, worst quality, low quality, JPEG compression residue, ugly, mutilated, redundant fingers, poorly painted hands, poorly painted faces, deformed, disfigured, deformed limbs, fused fingers, cluttered background, three legs, a lot of people in the background, upside down"
     )

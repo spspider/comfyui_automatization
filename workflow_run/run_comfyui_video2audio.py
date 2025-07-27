@@ -7,7 +7,7 @@ import shutil
 
 # Настройки
 COMFY_URL = "http://127.0.0.1:8188"
-WORKFLOW_PATH = "workflows/video2video_audio.json"
+WORKFLOW_PATH = "workflows/video2video_audio.json1"
 
 # Параметры запуска
 video_path = os.path.abspath("inputs/fluffy.mp4")

@@ -29,14 +29,6 @@ client_config = {
         "model": "moonshotai/kimi-k2:free",
         "client_type": "openai"
     },
-    "gemini": {
-        "client": OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.environ.get("deepseek_api_key"),
-        ),
-        "model": "google/gemini-2.0-flash-exp:free",
-        "client_type": "openai"
-    },
     "DeepSeek-r1": {
         "client": OpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -45,12 +37,28 @@ client_config = {
         "model": "deepseek/deepseek-r1:free",
         "client_type": "openai"
     },
+    "gemini": {
+        "client": OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ.get("deepseek_api_key"),
+        ),
+        "model": "google/gemini-2.0-flash-exp:free",
+        "client_type": "openai"
+    },
     "DeepSeek-exp-1206": {
         "client": OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=os.environ.get("deepseek_api_key"),
         ),
         "model": "google/gemini-exp-1206:free",
+        "client_type": "openai"
+    },
+    "qwen": {
+        "client": OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ.get("deepseek_api_key"),
+        ),
+        "model": "qwen/qwen3-coder:free",
         "client_type": "openai"
     }
 }
