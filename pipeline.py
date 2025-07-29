@@ -238,10 +238,8 @@ async def main():
         vids = list_videos_in_result()
     else:
         vids = generate_videos(blocks)
-    vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
-    
-
-    # vids = add_audio_to_scenes(vids, blocks)
+        vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
+    vids = add_audio_to_scenes(vids, blocks)
     # combine_videos(vids)
 
 if __name__ == '__main__':

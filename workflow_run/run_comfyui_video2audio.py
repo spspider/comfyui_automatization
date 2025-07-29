@@ -15,8 +15,8 @@ prompt = "A dreamy anime atmosphere with glowing particles"
 negative_prompt = "low quality, blurry, distortion"
 
 # Папки
-OUTPUT_DIR = Path("ComfyUI/output")
-RESULT_DIR = Path("result")
+OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")
+RESULT_DIR = Path("c:/AI/comfyui_automatization/result/")
 RESULT_DIR.mkdir(exist_ok=True)
 
 # Загрузка и изменение workflow
