@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 
 # Настройки
-COMFY_URL = "http://192.168.1.143:8188"
+COMFY_URL = "http://localhost:8188"
 WORKFLOW_PATH = "workflows/video2video_audio.json1"
 
 # Параметры запуска
