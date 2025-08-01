@@ -2,3 +2,5 @@ requests
 openai
 dotenv
 moviepy
+torch
+torchaudio

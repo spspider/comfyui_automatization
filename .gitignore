@@ -1,5 +1,6 @@
 .venv/
 result/
+result_videos/
 *.pyc
 __pycache__/
 .idea/
