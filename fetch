@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for filepath in "$@"; do
+    echo "file path: $filepath"
+    echo 'content: """'
+    cat "$filepath"
+    echo '"""'
+    echo "---"
+done

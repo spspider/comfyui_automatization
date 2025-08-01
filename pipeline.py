@@ -8,6 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from moviepy import concatenate_videoclips, VideoFileClip
+from utilites.text2audioZonos import generate_audio_from_text
 
 from provider_all import generate_response_allmy
 from text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
@@ -185,6 +186,7 @@ def combine_videos(video_list, output_path="final_movie.mp4"):
     final = concatenate_videoclips(clips, method="compose")
     final.write_videofile(output_path, codec="libx264")
     print(f"🎞️ Final movie saved to {output_path}")
+
     
 async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
     """Try to generate and parse story blocks, retrying if parsing fails."""
@@ -204,6 +206,8 @@ async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
         print("⚠️ Parsing failed. Retrying with new prompt...")
     print(f"❌ Failed to parse structured output after {max_attempts} attempts.")
     return None
+
+
 
 async def main():
     
@@ -236,7 +240,11 @@ async def main():
         pass
         vids = generate_videos(blocks)
         # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
-    vids = add_audio_to_scenes(vids, blocks)
+    # vids = add_audio_to_scenes(vids, blocks)
+    generate_audio_from_text(
+        text="Some things are better when time isn't frozen. But wouldn't you try it?",
+        output_path="result/scene_07_voice.wav"
+    )
     # combine_videos(vids)
 
 if __name__ == '__main__':
