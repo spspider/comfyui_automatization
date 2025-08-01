@@ -138,8 +138,8 @@ def convert_to_mp4(source_path, duration=3):
         print(f"❌ Не удалось конвертировать {source_path.name} в mp4:\n{e}")
         return None
 
-def list_videos_in_result():
-    result_dir = Path(r"C:/AI/comfyui_automatization/result")
+def list_videos_in_result(result_dir=None):
+    result_dir = Path(r"C:/AI/comfyui_automatization/"+result_dir)
     video_extensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"]  # Add more as needed
     return [file for file in result_dir.glob("*") if file.suffix.lower() in video_extensions]
 
@@ -153,19 +153,13 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
             duration = 10
         # clip = wan_2_1_t2v_gguf_api(blk['visual'], negative_prompt, video_seconds=duration)
         
-        clip = text_to_video_wan_api_nouugf(blk['visual'], negative_prompt, video_seconds=duration)
-        # clip = fetch_and_prepare_clip()
+        clip = text_to_video_wan_api_nouugf(idx, blk, negative_prompt, video_seconds=duration)
         if clip:
-            video_paths.append(str(clip))
-        #    converted = convert_to_mp4(clip)
-        #     if converted:
-        #         ordered = RESULT_DIR / f"scene_{idx:02d}.mp4"
-        #         shutil.move(str(converted), str(ordered))
-        #         video_paths.append(str(ordered))
-        #     else:
-        #         print(f"⚠️ Failed to convert video for scene {idx}")
-        # else:
-        #     print(f"⚠️ No clip found for scene {idx}")
+            new_name = RESULT_DIR / f"scene_{idx:02d}.webm"  # Format index as 2-digit number
+            shutil.move(str(clip), str(new_name))  # Rename the file
+            video_paths.append(str(new_name))  # Add the new path to the list
+        else:
+            print(f"⚠️ No clip found for scene {idx}")
     return video_paths
 
 def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise"):
@@ -235,13 +229,14 @@ async def main():
     print(f"Parsed {len(blocks)} scenes.")
     if DEBUG:
         print("DEBUG mode: skip creating videos.")
-        vids = list_videos_in_result()
+        vids = list_videos_in_result("result_videos")
+        for vid in vids:
+            print(vid)
     else:
+        pass
         vids = generate_videos(blocks)
-    vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
-    
-
-    # vids = add_audio_to_scenes(vids, blocks)
+        # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
+    vids = add_audio_to_scenes(vids, blocks)
     # combine_videos(vids)
 
 if __name__ == '__main__':
