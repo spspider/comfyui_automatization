@@ -139,10 +139,22 @@ def convert_to_mp4(source_path, duration=3):
         print(f"❌ Не удалось конвертировать {source_path.name} в mp4:\n{e}")
         return None
 
-def list_videos_in_result(result_dir=None):
-    result_dir = Path(r"C:/AI/comfyui_automatization/"+result_dir)
-    video_extensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"]  # Add more as needed
-    return [file for file in result_dir.glob("*") if file.suffix.lower() in video_extensions]
+def update_blocks_with_real_duration(blocks):
+    """
+    Update the 'duration' becouse actual duration is differ from the one in blocks
+    """
+    for idx, blk in enumerate(blocks, 1):
+        video_path = RESULT_DIR / f"scene_{idx:02d}.webm"
+        if video_path.exists():
+            try:
+                # Open the video and get its duration
+                clip = VideoFileClip(str(video_path))
+                blk['duration'] = clip.duration
+                # Close the video to free up resources
+                clip.close()
+            except Exception as e:
+                print(f"⚠️ Could not get duration for {video_path}: {e}")
+    return blocks
 
     
 def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
@@ -156,8 +168,9 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
         
         clip = text_to_video_wan_api_nouugf(idx, blk, negative_prompt, video_seconds=duration)
         if clip:
-            new_name = RESULT_DIR / f"scene_{idx:02d}.webm"  # Format index as 2-digit number
-            shutil.move(str(clip), str(new_name))  # Rename the file
+            new_name = RESULT_DIR / f"scene_{idx:02d}_video.webm"  # Format index as 2-digit number
+            shutil.move(Path(clip), str(new_name))  # Rename the file
+            shutil.remove(clip)  # Remove the original file
             video_paths.append(str(new_name))  # Add the new path to the list
         else:
             print(f"⚠️ No clip found for scene {idx}")
@@ -171,7 +184,8 @@ def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise
         # audio_clip = fetch_and_prepare_clip(exts=(".mp4",))
         if audio_clip:
             newname = RESULT_DIR / f"scene_{idx:02d}_audio.mp4"
-            shutil.move(str(audio_clip), str(newname))
+            shutil.move(Path(audio_clip), str(newname))
+            shutil.remove(audio_clip)
             audio_video_paths.append(str(newname))
         else:
             print(f"⚠️ No audio clip found for scene {idx}, using original.")
@@ -207,10 +221,65 @@ async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
     print(f"❌ Failed to parse structured output after {max_attempts} attempts.")
     return None
 
+def clean_comfy_output():
+    """Remove all files from ComfyUI output directory"""
+    for file in COMFY_OUTPUT_DIR.glob("*"):
+        try:
+            if file.is_file():
+                file.unlink()
+            elif file.is_dir():
+                shutil.rmtree(file)
+        except Exception as e:
+            print(f"⚠️ Could not delete {file}: {e}") 
+            
+def burn_tts_to_video(video_paths, blocks):
+    """
+    Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
+    Returns a list of updated video paths.
+    """
+    updated_videos = []
+    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
 
+    for idx, video_path in enumerate(video_paths, 1):
+        video_path = Path(video_path)
+        tts_audio = RESULT_DIR / f"scene_{idx:02d}_voice.wav"
+        if not tts_audio.exists():
+            print(f"⚠️ TTS audio not found for scene {idx}: {tts_audio}")
+            updated_videos.append(str(video_path))
+            continue
+
+        output_path = RESULT_DIR / f"scene_{idx:02d}_tts_berned.mp4"
+        cmd = [
+            ffmpeg, "-y",
+            "-i", Path(video_path),
+            "-i", Path(tts_audio),
+            "-filter_complex",
+            "[0:a]volume=0.6[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
+            "-map", "0:v", "-map", "[aout]",
+            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            str(output_path)
+        ]
+        try:
+            subprocess.run(cmd, check=True)
+            updated_videos.append(str(output_path))
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to merge TTS with {video_path.name}: {e}")
+            updated_videos.append(str(video_path))
+        # finally:
+        #     # Clean up the original video file if needed
+        #     if video_path.exists():
+        #         try:
+        #             video_path.unlink()
+        #         except Exception as e:
+        #             print(f"⚠️ Could not delete original video {video_path}: {e}")
+    return updated_videos
+
+def list_files_in_result(pattern, result_dir=None):
+    result_dir = Path(r"C:/AI/comfyui_automatization/"+result_dir)
+    return sorted([file for file in result_dir.glob(pattern) if file.is_file()])    
 
 async def main():
-    
+    clean_comfy_output()   
     if DEBUG:
         print("DEBUG mode: skip requesting new blocks.")
         meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
@@ -222,30 +291,31 @@ async def main():
     if not blocks:
         return
 
-    for idx, blk in enumerate(blocks, 1):
-        print(f"[Scene {idx}]")
-        print(f"  Title: {blk.get('title')}")
-        print(f"  Visual: {blk.get('visual')}")
-        print(f"  Sound: {blk.get('sound')}")
-        print(f"  Text: {blk.get('text')}")
-        print("-" * 40)
+    # for idx, blk in enumerate(blocks, 1):
+    #     print(f"[Scene {idx}]")
+    #     print(f"  Title: {blk.get('title')}")
+    #     print(f"  Visual: {blk.get('visual')}")
+    #     print(f"  Sound: {blk.get('sound')}")
+    #     print(f"  Text: {blk.get('text')}")
+    #     print("-" * 40)
         
     print(f"Parsed {len(blocks)} scenes.")
     if DEBUG:
         print("DEBUG mode: skip creating videos.")
-        vids = list_videos_in_result("result")
-        for vid in vids:
-            print(vid)
+        vids = list_files_in_result("scene_*_video.webm","result") 
+        # for vid in vids:
+        #     print(vid)
+        # for idx, blk in enumerate(blocks, 1):
+        #     generate_audio_from_text(blk["text"], output_path=f"result/scene_{idx:02d}_voice.wav")
+        # vids = add_audio_to_scenes(vids, blocks)
+        # burn_tts_to_video(vids, blocks)  # 3. накладываем TTS на видео
     else:
+
         pass
-        vids = generate_videos(blocks)
+        # vids = generate_videos(blocks)
         # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
-    # vids = add_audio_to_scenes(vids, blocks)
-    # generate_audio_from_text(
-    #     text="Some things are better when time isn't frozen. But wouldn't you try it?",
-    #     output_path="result/scene_07_voice.wav"
-    # )
-    # combine_videos(vids)
+    vids = list_files_in_result("scene_*_tts_berned.mp4","result")    
+    combine_videos(vids)
 
 if __name__ == '__main__':
     asyncio.run(main())

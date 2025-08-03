@@ -4,7 +4,7 @@ import os
 import time
 from pathlib import Path
 import shutil
-
+copy = False
 
 def text_to_video_wan_api_nouugf(idx, blk, negative_text, workflow_path="workflows/text_to_video_wan_api_nouugf.json", video_seconds=5):
     positive_text = blk['visual']
@@ -72,10 +72,13 @@ def text_to_video_wan_api_nouugf(idx, blk, negative_text, workflow_path="workflo
     latest = max(files, key=lambda p: p.stat().st_mtime)
 
     dest = RESULT_DIR / latest.name
-    shutil.copy(latest, dest)
-    os.remove(latest)
-    print(f"✅ Saved output: {dest}")
-    return dest
+    if copy:
+        shutil.copy(latest, dest)
+        os.remove(latest)
+        print(f"✅ Saved output: {dest}")
+        return dest
+    else:
+        return latest
 
 
 if __name__ == "__main__":

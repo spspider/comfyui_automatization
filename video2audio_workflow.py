@@ -5,11 +5,12 @@ import os
 import time
 from pathlib import Path
 import shutil
+copy = False
 
 def run_video2audio(video_path, prompt, negative_prompt, workflow_path="workflows/video2video_audio.json"):
     COMFY_URL = "http://127.0.0.1:8188"
-    OUTPUT_DIR = Path("ComfyUI/output")
-    RESULT_DIR = Path("result")
+    OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")
+    RESULT_DIR = Path("c:/AI/comfyui_automatization/result/")
     RESULT_DIR.mkdir(exist_ok=True)
 
     with open(workflow_path, "r", encoding="utf-8") as f:
@@ -33,10 +34,15 @@ def run_video2audio(video_path, prompt, negative_prompt, workflow_path="workflow
             if prompt_id in data and "outputs" in data[prompt_id]:
                 break
         time.sleep(1)
-
-    files = list(OUTPUT_DIR.glob("MMaudio_*.mp4")) + list(OUTPUT_DIR.glob("MMaudio_*.png"))
-    files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
-    for file in files[:3]:
-        dest = RESULT_DIR / file.name
-        shutil.copy(file, dest)
-        print(f"Скопировано: {file.name} → {dest}")
+    if copy:
+        files = list(OUTPUT_DIR.glob("MMaudio_*.mp4")) + list(OUTPUT_DIR.glob("MMaudio_*.png"))
+        files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        for file in files[:3]:
+            dest = RESULT_DIR / file.name
+            shutil.copy(file, dest)
+            print(f"Скопировано: {file.name} → {dest}")
+    else:
+        files = list(OUTPUT_DIR.glob("MMaudio_*.mp4"))
+        files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        return files[0] 
+    # return RESULT_DIR / files[0].name
