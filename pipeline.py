@@ -233,7 +233,7 @@ async def main():
     print(f"Parsed {len(blocks)} scenes.")
     if DEBUG:
         print("DEBUG mode: skip creating videos.")
-        vids = list_videos_in_result("result_videos")
+        vids = list_videos_in_result("result")
         for vid in vids:
             print(vid)
     else:
@@ -241,10 +241,10 @@ async def main():
         vids = generate_videos(blocks)
         # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры
     # vids = add_audio_to_scenes(vids, blocks)
-    generate_audio_from_text(
-        text="Some things are better when time isn't frozen. But wouldn't you try it?",
-        output_path="result/scene_07_voice.wav"
-    )
+    # generate_audio_from_text(
+    #     text="Some things are better when time isn't frozen. But wouldn't you try it?",
+    #     output_path="result/scene_07_voice.wav"
+    # )
     # combine_videos(vids)
 
 if __name__ == '__main__':
