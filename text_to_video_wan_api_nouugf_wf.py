@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 copy = False
 
-def text_to_video_wan_api_nouugf(idx, blk, negative_text, workflow_path="workflows/text_to_video_wan_api_nouugf.json", video_seconds=5):
+def text_to_video_wan_api_nouugf(blk, negative_text, workflow_path="workflows/text_to_video_wan_api_nouugf.json", video_seconds=5):
     positive_text = blk['visual']
     COMFY_URL = "http://127.0.0.1:8188"
     OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")

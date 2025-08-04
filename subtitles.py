@@ -1,7 +1,7 @@
 from pathlib import Path
 import subprocess
 
-RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result_subtitles")
+RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 
 ################ Subtitles
 

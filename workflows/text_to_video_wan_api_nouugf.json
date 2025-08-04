@@ -120,8 +120,8 @@
   },
   "40": {
     "inputs": {
-      "width": 832,
-      "height": 480,
+      "width": 480,
+      "height": 832,
       "length": 33,
       "batch_size": 1
     },

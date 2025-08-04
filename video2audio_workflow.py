@@ -44,5 +44,8 @@ def run_video2audio(video_path, prompt, negative_prompt, workflow_path="workflow
     else:
         files = list(OUTPUT_DIR.glob("MMaudio_*.mp4"))
         files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
-        return files[0] 
-    # return RESULT_DIR / files[0].name
+        if files:
+            return files[0]
+        else:
+            print(f"⚠️ No MMaudio_*.mp4 files found in {OUTPUT_DIR}")
+            return None
