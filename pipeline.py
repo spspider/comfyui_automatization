@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from moviepy import concatenate_videoclips, VideoFileClip
 from utilites.text2audioZonos import generate_audio_from_text
+from utilites.upload_youtube import upload_video
 
 from provider_all import generate_response_allmy
 from text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
@@ -21,11 +22,13 @@ RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG = False#'audio'
 
-from subtitles import format_time, generate_subtitles, ffmpeg_safe_path, burn_subtitles
+from utilites.subtitles import format_time, generate_subtitles, ffmpeg_safe_path, burn_subtitles, create_full_subtitles, create_video_with_subtitles
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral video content creator. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, food challenges, DIY projects, dances, pet tricks, and transformation videos. Write a complete and structured script for a 30 second video.\n"
+        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, food challenges, DIY projects, dances, pet tricks, and transformation videos. Write a complete and structured script for a 30 second video.\n"
+        "description should be repeated in each frame.n"
+        "Each scene will be started by AI video generator, separately, without context, that's why you need to repeat description of what you doing in each scene and context.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
         "Respond using the exact format below for each scene:\n"
         "\n"
@@ -35,8 +38,8 @@ async def generate_story(provider="qwen"):
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
-        "**Visual:** Describe the scene. Describe as much detail as possible. at least 5-10 sentences including background and foreground.\n"
-        "**Sound:** Describe the sound or music.\n"
+        "**Visual:** Describe the scene. Use at least 10 sentences including background and foreground very detailed.\n"
+        "**Sound:** Describe the sound.\n"
         "**Text:** On-screen text or captions (if any).\n"
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
@@ -90,7 +93,7 @@ def parse_story_blocks(story_text):
     # Save meta to video_output directory
     video_output_dir = Path("video_output")
     video_output_dir.mkdir(exist_ok=True)
-    meta_file = video_output_dir / "meta.json"
+    meta_file = video_output_dir / sanitize_filename(f"{meta['video_title']}.json")
     import json
     with open(meta_file, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
@@ -162,16 +165,16 @@ def convert_to_mp4(source_path, duration=3):
 
 def update_blocks_with_real_duration(blocks):
     """
-    Update the 'duration' becouse actual duration is differ from the one in blocks
+    Update 'duration' (in seconds) and add 'duration_ms' (in milliseconds)
+    from actual video file duration.
     """
     for idx, blk in enumerate(blocks, 1):
-        video_path = RESULT_DIR / f"scene_{idx:02d}.webm"
+        video_path = RESULT_DIR / f"scene_{idx:02d}_video.webm"
         if video_path.exists():
             try:
-                # Open the video and get its duration
                 clip = VideoFileClip(str(video_path))
-                blk['duration'] = clip.duration
-                # Close the video to free up resources
+                duration_sec = clip.duration
+                blk['duration'] = duration_sec
                 clip.close()
             except Exception as e:
                 print(f"⚠️ Could not get duration for {video_path}: {e}")
@@ -198,7 +201,8 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
             print(f"⚠️ No clip found for scene {idx}")
     return video_paths
 
-def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise"):
+def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise, music"):
+
     audio_video_paths = []
     for idx, (video_path, blk) in enumerate(zip(video_paths, blocks), 1):
         print(f"🔊 Adding audio to {video_path}")
@@ -246,6 +250,7 @@ def combine_videos(video_list, video_title="final_movie", output_path=RESULT_DIR
     final = concatenate_videoclips(clips, method="compose")
     final.write_videofile(output_path, codec="libx264")
     print(f"🎞️ Final movie saved to {output_path}")
+    return output_path
 
     
 async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
@@ -262,9 +267,9 @@ async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
     print(f"❌ Failed to parse structured output after {max_attempts} attempts.")
     return None
 
-def clean_comfy_output():
+def clean_comfy_output(DIR=COMFY_OUTPUT_DIR):
     """Remove all files from ComfyUI output directory"""
-    for file in COMFY_OUTPUT_DIR.glob("*"):
+    for file in DIR.glob("*"):
         try:
             if file.is_file():
                 file.unlink()
@@ -336,18 +341,82 @@ def burn_tts_to_video(video_paths, blocks):
             updated_videos.append(str(video_path))
     return updated_videos
 
+def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None):
+    """
+    Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
+    If the video has no audio, use only TTS.
+    """
+    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
+
+    # Check if video has audio
+    probe_cmd = [
+        ffmpeg, "-i", Path(video_path),
+        "-hide_banner", "-loglevel", "error", "-show_streams", "-select_streams", "a", "-of", "default=noprint_wrappers=1:nokey=1"
+    ]
+    has_audio = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a",
+            "-show_entries", "stream=codec_type",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(video_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    ).stdout.decode().strip() != ""
+
+    if has_audio:
+        print(f"🎧 Scene has audio — mixing with TTS.")
+        cmd = [
+            ffmpeg, "-y",
+            "-i", Path(video_path),
+            "-i", Path(audio_path),
+            "-filter_complex",
+            "[0:a]volume=0.6[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
+            "-map", "0:v", "-map", "[aout]",
+            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            Path(output_path)
+        ]
+    else:
+        print(f"🔈 Scene has no audio — adding only TTS.")
+        cmd = [
+            ffmpeg, "-y",
+            "-i", Path(video_path),
+            "-i", Path(audio_path),
+            "-map", "0:v", "-map", "1:a",
+            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            Path(output_path)
+        ]
+
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to merge TTS with {video_path.name}: {e}")
+    return output_path
+
+def generate_combined_tts_audio(blocks, output_path):
+    """
+    Joins all blocks' text into a single narration for entire video, preserving timing info.
+    Returns the list of durations (seconds) for each block, and path to full audio.
+    """
+    from utilites.text2audioZonos import generate_audio_from_text
+
+    full_text = "\n".join([blk['text'] for blk in blocks])
+    generate_audio_from_text(text=full_text, output_path=output_path)
+    return output_path
+
 
 def list_files_in_result(pattern, result_dir=None):
     result_dir = Path(r"C:/AI/comfyui_automatization/"+result_dir)
     return sorted([file for file in result_dir.glob(pattern) if file.is_file()])    
 
-async def main():
-    clean_comfy_output()   
+async def main1():
+    clean_comfy_output(COMFY_OUTPUT_DIR)  
+    
+
     DEBUG = True
     if DEBUG:
         print("DEBUG mode: skip requesting new blocks.")
         meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
     else:
+        clean_comfy_output(RESULT_DIR)  
         meta, blocks = await get_story_blocks_with_retries("qwen", RESULT_DIR)
     if not blocks:
         return
@@ -359,22 +428,38 @@ async def main():
 
     vids = list_files_in_result("scene_*_video.webm","result") 
     blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
-
     vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
 
     vids = list_files_in_result("scene_*_audio.mp4","result") 
     vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
-   
+    generate_combined_tts_audio(blocks, "result/combined_voice.wav")
     vids = list_files_in_result("scene_*_audio_subtitled.mp4","result") 
     for idx, blk in enumerate(blocks, 1):
         generate_audio_from_text(blk["text"], output_path=f"result/scene_{idx:02d}_voice.wav")
-    
+   
     vids = list_files_in_result("scene_*_audio_subtitled.mp4","result") 
-    burn_tts_to_video(vids, blocks)  # 3. накладываем TTS на видео
+    video = combine_videos(vids, meta['video_title'], output_path=Path("result/"))
+    merge_audio_and_video(blocks, 
+                          audio_path=RESULT_DIR / "combined_voice.wav", 
+                          video_path=video, 
+                          output_path=Path("result/") / video.name.replace(".mp4", "_final.mp4"))
+    # vids = list_files_in_result("scene_*_tts.mp4","result")
 
-    vids = list_files_in_result("scene_*_tts.mp4","result")    
-    combine_videos(vids, meta['video_title'], "video_output")
+
+
+    meta_json = Path("video_output") / f"{sanitize_filename(meta['video_title'])}.json"
+    final_video = Path("video_output") / video.name.replace(".mp4", "_final.mp4")
     
-
+    # upload_video(str(final_video), str(meta_json), privacy="unlisted")
+async def main():
+    meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+    blocks = update_blocks_with_real_duration(blocks)
+    subtitle_path = create_full_subtitles(blocks)   # 2. накладываем полные субтитры
+    create_video_with_subtitles(
+        video_path="result/video_final.mp4",
+        audio_path="result/combined_voice.wav",
+        subtitle_path=subtitle_path,
+        output_path="result/video_final_subbed.mp4"
+    )
 if __name__ == '__main__':
     asyncio.run(main())

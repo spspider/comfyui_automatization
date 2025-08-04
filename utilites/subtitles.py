@@ -1,5 +1,7 @@
 from pathlib import Path
 import subprocess
+from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+import pysrt
 
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 
@@ -64,5 +66,40 @@ def burn_subtitles(video_paths, blocks):
             subtitled_paths.append(str(input_path))
 
     return subtitled_paths
+def create_full_subtitles(blocks):
+    """
+    Creates full subtitles txt file from blocks, where duration and scenes, so it adds subtitles to the video.
+    """
+    full_subtitles = []
+    for idx, block in enumerate(blocks, 1):
+        start_seconds = sum(b["duration"] for b in blocks[:idx-1])
+        end_seconds = start_seconds + block["duration"]
+        subtitle_text = block["text"].strip().replace('\n', ' ')
+        full_subtitles.append(f"{format_time(start_seconds)} --> {format_time(end_seconds)}\n{subtitle_text}\n")
 
-############################
+    full_srt_path = RESULT_DIR / "full_subtitles.srt"
+    with open(full_srt_path, "w", encoding="utf-8") as f:
+        f.writelines(full_subtitles)
+    print(f"📝 Полные субтитры сохранены в: {full_srt_path}")
+    return full_srt_path
+
+def create_video_with_subtitles(video_path, audio_path, subtitle_path, output_path):
+    video = VideoFileClip(video_path)
+    audio = AudioFileClip(audio_path)
+    subtitles = pysrt.open(subtitle_path)
+
+    subtitle_clips = []
+    for sub in subtitles:
+        txt = sub.text.replace("\n", " ")
+        start = sub.start.to_time()
+        end = sub.end.to_time()
+
+        txt_clip = (TextClip(txt, fontsize=48, color='white', stroke_color='black', stroke_width=2, font='Arial-Bold')
+                    .set_position(('center', 'bottom'))
+                    .set_start(start.total_seconds())
+                    .set_duration((end - start).total_seconds()))
+        subtitle_clips.append(txt_clip)
+
+    final = CompositeVideoClip([video] + subtitle_clips)
+    # final = final.with_audio(audio)
+    final.write_videofile(output_path, codec='libx264', audio_codec='aac')
