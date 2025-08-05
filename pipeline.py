@@ -29,7 +29,6 @@ from utilites.subtitles import format_time, generate_subtitles, ffmpeg_safe_path
 async def generate_story(provider="qwen"):
     prompt = (
         "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, food challenges, DIY projects, dances, pet tricks, and transformation videos. Write a complete and structured script for a 30 second video.\n"
-        "description should be repeated in each frame.n"
         "Each scene will be started by AI video generator, separately, without context, that's why you need to repeat description of what you doing in each scene and context.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
         "YOU HAVE TO DESCRIBE CHARACTERS OR OBJECTS IN EACH SCENE FROM THE BEGINNING, AS THIS VIDEO GENERATES SEPARATELY\n"
@@ -43,11 +42,12 @@ async def generate_story(provider="qwen"):
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
         "**Visual:** Describe the scene. Use at least 10 sentences including background and foreground very detailed.\n"
-        "**Sound:** Describe the sound.\n"
+        "**Sound:** Describe the sound. latest scene should be with music for subscribers\n"
         "**Text:** On-screen short text or captions use emotions, wow, exclamation marks. 5 words.\n"
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
-        "Ensure all timestamps are accurate and the output matches this exact format."
+        "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
+        "negative prompt: coffee cups"
     )
     return await generate_response_allmy(provider, prompt)
 
@@ -404,6 +404,11 @@ async def main():
         video_path=RESULT_DIR / "final_movie.mp4",
         output_path=f"video_output/{sanitize_filename(meta['video_title'])}.mp4"
     )
+    subtitle_file = create_full_subtitles(blocks)
+    
+    subtitle_output = Path("video_output") / f"{sanitize_filename(meta['video_title'])}.srt"
+    shutil.copy(subtitle_file, subtitle_output)
+    print(f"📝 Subtitle file saved to: {subtitle_output}")
     
     #############END#############
     # # video = Path("result/The Coffee Cup That Stole the Internet.mp4")
@@ -430,4 +435,5 @@ async def main2():
         output_path="result/video_final_subbed.mp4"
     )
 if __name__ == '__main__':
-    asyncio.run(main())
+    while True:
+        asyncio.run(main())
