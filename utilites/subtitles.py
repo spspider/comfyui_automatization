@@ -8,21 +8,20 @@ RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 ################ Subtitles
 
 def format_time(seconds):
-    """Преобразует секунды в формат SRT (часы:минуты:секунды,миллисекунды)"""
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    return f"{h:02}:{m:02}:{s:02},000"
+    """Convert seconds to SRT time format (HH:MM:SS,mmm)"""
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds % 1) * 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
 def generate_subtitles(blocks):
     """
-    Создаёт .srt-файлы для каждой сцены на основе текста из blocks[i]["text"]
-    и длительности blocks[i]["duration"]
+    Generate .srt files for each scene based on text and duration from blocks.
     """
     for idx, block in enumerate(blocks, 1):
         start_seconds = 0
         end_seconds = block["duration"]
-
         subtitle_text = block["text"].strip().replace('\n', ' ')
 
         srt_content = f"""1
@@ -31,38 +30,67 @@ def generate_subtitles(blocks):
 """
 
         srt_path = RESULT_DIR / f"scene_{idx:02d}.srt"
-        with open(srt_path, "w", encoding="utf-8") as f:
-            f.write(srt_content)
-        print(f"📝 Субтитры для сцены {idx} сохранены в: {srt_path}")
+        try:
+            with open(srt_path, "w", encoding="utf-8") as f:
+                f.write(srt_content)
+            print(f"📝 Субтитры для сцены {idx} сохранены в: {srt_path}")
+        except Exception as e:
+            print(f"❌ Failed to write SRT file {srt_path}: {e}")
+    return True
 
 def ffmpeg_safe_path(path: Path):
-    return str(path).replace('\\', '/').replace(':', '\\:')
+    return str(path.relative_to(Path.cwd())).replace('\\', '/')
 
 def burn_subtitles(video_paths, blocks):
-    generate_subtitles(blocks)
-    ffmpeg = "c:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe"
+    """
+    Burn subtitles into videos using FFmpeg.
+    """
+    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
     subtitled_paths = []
+    
+    # Ensure the result directory exists
+    RESULT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Generate subtitles
+    if not generate_subtitles(blocks):
+        print("⚠️ Subtitle generation failed, proceeding without subtitles")
+        return video_paths
 
     for idx, video_path in enumerate(video_paths, 1):
         input_path = Path(video_path)
         srt_path = RESULT_DIR / f"scene_{idx:02d}.srt"
         output_path = RESULT_DIR / f"{input_path.stem}_subtitled.mp4"
-
+        
+        # Check if input video and SRT file exist
+        if not input_path.exists():
+            print(f"⚠️ Input video not found: {input_path}, skipping")
+            subtitled_paths.append(str(input_path))
+            continue
+        if not srt_path.exists():
+            print(f"⚠️ SRT file not found: {srt_path}, skipping subtitles for {input_path.name}")
+            subtitled_paths.append(str(input_path))
+            continue
+        
+        # Properly escape SRT path for FFmpeg
+        escaped_srt = str(srt_path).replace("\\", "/").replace(":", "\\:")
+        vf_filter = f"subtitles='{escaped_srt}':force_style='Fontsize=24,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=1,Shadow=0'"
+        
         cmd = [
             ffmpeg,
             "-y",
             "-i", str(input_path),
-            "-vf", f"subtitles='{ffmpeg_safe_path(srt_path)}'",
+            "-vf", vf_filter,
             "-c:a", "copy",
             str(output_path)
         ]
-        print(f"🔤 Накладываем субтитры на {input_path.name} → {output_path.name}", cmd)
+        print(f"🔤 Накладываем субтитры на {input_path.name} → {output_path.name}: {cmd}")
         try:
-            subprocess.run(cmd, check=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             subtitled_paths.append(str(output_path))
             print(f"✅ Subtitles burned into: {output_path.name}")
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             print(f"❌ Failed to burn subtitles into: {input_path.name}")
+            print(f"Error: {e.stderr}")
             subtitled_paths.append(str(input_path))
 
     return subtitled_paths

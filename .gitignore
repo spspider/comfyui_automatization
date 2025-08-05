@@ -21,3 +21,5 @@ __pycache__/
 media/
 mediafiles/
 .env
+**/*result/
+**/*video_output/
