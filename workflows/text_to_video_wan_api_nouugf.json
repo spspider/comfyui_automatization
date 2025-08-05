@@ -122,7 +122,7 @@
     "inputs": {
       "width": 480,
       "height": 832,
-      "length": 33,
+      "length": 45,
       "batch_size": 1
     },
     "class_type": "EmptyHunyuanLatentVideo",

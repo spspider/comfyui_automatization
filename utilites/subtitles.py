@@ -73,7 +73,7 @@ def burn_subtitles(video_paths, blocks):
         
         # Properly escape SRT path for FFmpeg
         escaped_srt = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        vf_filter = f"subtitles='{escaped_srt}':force_style='Fontsize=24,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=1,Shadow=0'"
+        vf_filter = f"subtitles='{escaped_srt}':force_style='Fontsize=18,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=1,Shadow=0'"
         
         cmd = [
             ffmpeg,

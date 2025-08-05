@@ -1,16 +1,23 @@
 import sys
 
 sys.path.append(r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Synchronous CUDA calls for better error reporting
+
 import torch
 import torchaudio
 import random
+import gc
 sys.path.append(r"C:\AI\Zonos-for-windows")
 
 from zonos.model import Zonos
 from zonos.conditioning import make_cond_dict
 from zonos.utils import DEFAULT_DEVICE as device
 
-
+# Force memory cleanup
+torch.cuda.empty_cache()
+gc.collect()
+print("🧽 CUDA VRAM cleared")
 def generate_audio_from_text(
     text,
     speaker_audio_path=None,
@@ -25,6 +32,10 @@ def generate_audio_from_text(
     emotions=[1.0, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2],
     unconditional_keys=["emotion",  "pitch_std"]
 ):
+    # Clear memory before loading
+    torch.cuda.empty_cache()
+    gc.collect()
+    
     print("📦 Loading Zonos model...")
     model = Zonos.from_pretrained("Zyphra/Zonos-v0.1-transformer", device=device)
 
@@ -71,6 +82,12 @@ def generate_audio_from_text(
     print(f"💾 Saving audio to {output_path}...")
     wavs = model.autoencoder.decode(codes).cpu()
     torchaudio.save(output_path, wavs[0], model.autoencoder.sampling_rate)
+    
+    # Clean up memory
+    del model, codes, wavs
+    torch.cuda.empty_cache()
+    gc.collect()
+    
     print("✅ Generation complete.")
     return seed
 

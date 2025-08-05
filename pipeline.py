@@ -34,16 +34,16 @@ async def generate_story(provider="qwen"):
         "YOU HAVE TO DESCRIBE CHARACTERS OR OBJECTS IN EACH SCENE FROM THE BEGINNING, AS THIS VIDEO GENERATES SEPARATELY\n"
         "Respond using the exact format below for each scene:\n"
         "\n"
-        "**VIDEO_Title:** The Coffee Cup That Stole the Internet**\n"
-        "**VIDEO_Description:** A hilarious story about a mischievous coffee cup causing chaos in the office.\n"
-        "**VIDEO_Hashtags:** #Comedy #CoffeeChaos #OfficeLife\n"
-        "**Overall_Music:** Describe the overall music.\n"
+        "**VIDEO_Title:** video title, short\n"
+        "**VIDEO_Description:** description about content, will be use for youtube.\n"
+        "**VIDEO_Hashtags:** tags, separated by commas\n"
+        "**Overall_Music:** Description of the music according content\n"
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
         "**Visual:** Describe the scene. Use at least 10 sentences including background and foreground very detailed.\n"
         "**Sound:** Describe the sound. latest scene should be with music for subscribers\n"
-        "**Text:** On-screen short text or captions use emotions, wow, exclamation marks. 5 words.\n"
+        "**Text:** On-screen scene captions,some words, use emotions like wow, exclamation marks etc, dont use emodzies.\n"
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
         "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
@@ -373,7 +373,7 @@ async def main():
         return
 
        
-    # print(f"Parsed {len(blocks)} scenes.")
+    print(f"Parsed {len(blocks)} scenes.")
 
     vids = generate_videos(blocks) # generate videos from blocks
     vids = list_files_in_result("scene_*_video.webm","result") 
@@ -383,7 +383,9 @@ async def main():
 
     vids = list_files_in_result("scene_*_audio.mp4","result") 
     vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
-    # generate_combined_tts_audio(blocks, "result/combined_voice.wav")
+    #combined block audio
+    #generate_combined_tts_audio(blocks, "result/combined_voice.wav")
+    
     for idx, blk in enumerate(blocks, 1):
       generate_audio_from_text(blk["text"], output_path=f"result/scene_{idx:02d}_voice.wav")
     
@@ -410,6 +412,7 @@ async def main():
     shutil.copy(subtitle_file, subtitle_output)
     print(f"📝 Subtitle file saved to: {subtitle_output}")
     
+    
     #############END#############
     # # video = Path("result/The Coffee Cup That Stole the Internet.mp4")
     # merge_audio_and_video(blocks, 
@@ -435,5 +438,8 @@ async def main2():
         output_path="result/video_final_subbed.mp4"
     )
 if __name__ == '__main__':
-    while True:
+    if DEBUG:
         asyncio.run(main())
+    else:
+        while True:
+            asyncio.run(main())
