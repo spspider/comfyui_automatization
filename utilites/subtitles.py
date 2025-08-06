@@ -73,7 +73,7 @@ def burn_subtitles(video_paths, blocks):
         
         # Properly escape SRT path for FFmpeg
         escaped_srt = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        vf_filter = f"subtitles='{escaped_srt}':force_style='Fontsize=18,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=1,Shadow=0'"
+        vf_filter = f"subtitles='{escaped_srt}':force_style='Fontsize=12,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=1,Shadow=0'"
         
         cmd = [
             ffmpeg,
@@ -131,3 +131,15 @@ def create_video_with_subtitles(video_path, audio_path, subtitle_path, output_pa
     final = CompositeVideoClip([video] + subtitle_clips)
     # final = final.with_audio(audio)
     final.write_videofile(output_path, codec='libx264', audio_codec='aac')
+
+def clean_text_captions(blocks):
+    """Clean text blocks from everything except letters, numbers, and punctuation."""
+    import re
+    
+    for block in blocks:
+        # Keep only letters, numbers, spaces, and common punctuation
+        cleaned = re.sub(r'[^a-zA-Z0-9\s.,!?;:"\'-]', '', block['text'])
+        # Remove extra whitespace
+        block['text'] = re.sub(r'\s+', ' ', cleaned).strip()
+    
+    return blocks

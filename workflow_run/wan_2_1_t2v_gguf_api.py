@@ -80,7 +80,7 @@ def wan_2_1_t2v_gguf_api(prompt, negative_prompt, workflow_path="workflows/wan-2
 
 if __name__ == "__main__":
     # Example call
-    run_text2video(
+    wan_2_1_t2v_gguf_api(
         "a fox moving quickly in a beautiful winter scenery nature trees sunset tracking camera",
         "Overexposure, static, blurred details, subtitles, paintings, pictures, still, overall gray, worst quality, low quality, JPEG compression residue, ugly, mutilated, redundant fingers, poorly painted hands, poorly painted faces, deformed, disfigured, deformed limbs, fused fingers, cluttered background, three legs, a lot of people in the background, upside down"
     )

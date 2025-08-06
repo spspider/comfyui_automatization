@@ -67,3 +67,10 @@ def run_image2video(image_path, prompt, negative_prompt, workflow_path="workflow
         print(f"✅ Скопировано: {latest_file.name} → {dest}")
     else:
         print("❌ Не найден сгенерированный файл.")
+        
+if __name__ == "__main__":
+    # Example call
+    run_image2video(
+        "a fox moving quickly in a beautiful winter scenery nature trees sunset tracking camera",
+        "Overexposure, static, blurred details, subtitles, paintings, pictures, still, overall gray, worst quality, low quality, JPEG compression residue, ugly, mutilated, redundant fingers, poorly painted hands, poorly painted faces, deformed, disfigured, deformed limbs, fused fingers, cluttered background, three legs, a lot of people in the background, upside down"
+    )        

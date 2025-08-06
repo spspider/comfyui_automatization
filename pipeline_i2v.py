@@ -13,7 +13,6 @@ from utilites.text2audioZonos import generate_audio_from_text
 from utilites.upload_youtube import upload_video
 
 from provider_all import generate_response_allmy
-from workflow_run import run_t2v_wan22
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
 from utilites.utilites import reduce_audio_volume
 from workflow_run.video2audio_workflow import run_video2audio
@@ -150,8 +149,7 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
             duration = 10
         # clip = wan_2_1_t2v_gguf_api(blk['visual'], negative_prompt, video_seconds=duration)
         
-        # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
-        clip = run_t2v_wan22(blk['visual'])
+        clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
         if clip:
             new_name = RESULT_DIR / f"scene_{idx:02d}_video.webm"  # Format index as 2-digit number
             shutil.move(Path(clip), str(new_name))  # Rename the file

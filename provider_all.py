@@ -58,7 +58,7 @@ client_config = {
             base_url="https://openrouter.ai/api/v1",
             api_key=os.environ.get("deepseek_api_key"),
         ),
-        "model": "qwen/qwen3-coder:free",
+        "model": "qwen/qwen3-235b-a22b:free",
         "client_type": "openai"
     }
 }
