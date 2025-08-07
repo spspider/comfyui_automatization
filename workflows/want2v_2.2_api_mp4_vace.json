@@ -76,14 +76,14 @@
   },
   "57": {
     "inputs": {
-      "frame_rate": 16,
+      "frame_rate": 24,
       "loop_count": 0,
-      "filename_prefix": "Wan2.2",
-      "format": "video/av1-webm",
+      "filename_prefix": "want2v_Wan2.2",
+      "format": "video/h264-mp4",
       "pix_fmt": "yuv420p",
-      "crf": 23,
-      "input_color_depth": "8bit",
-      "save_metadata": true,
+      "crf": 18,
+      "save_metadata": false,
+      "trim_to_audio": false,
       "pingpong": false,
       "save_output": true,
       "images": [
@@ -99,13 +99,13 @@
   "82": {
     "inputs": {
       "add_noise": "enable",
-      "noise_seed": 673964075664525,
-      "steps": 20,
-      "cfg": 3.5,
-      "sampler_name": "euler",
-      "scheduler": "simple",
+      "noise_seed": 225109201369620,
+      "steps": 12,
+      "cfg": 3.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
       "start_at_step": 0,
-      "end_at_step": 10,
+      "end_at_step": 6,
       "return_with_leftover_noise": "enable",
       "model": [
         "54",
@@ -132,13 +132,13 @@
   "84": {
     "inputs": {
       "add_noise": "disable",
-      "noise_seed": 30853018286064,
-      "steps": 20,
-      "cfg": 3.5,
-      "sampler_name": "euler",
-      "scheduler": "simple",
-      "start_at_step": 10,
-      "end_at_step": 10000,
+      "noise_seed": 0,
+      "steps": 10,
+      "cfg": 3.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "start_at_step": 6,
+      "end_at_step": 16,
       "return_with_leftover_noise": "disable",
       "model": [
         "91",
@@ -179,7 +179,7 @@
     "inputs": {
       "width": 480,
       "height": 848,
-      "length": 81,
+      "length": 65,
       "batch_size": 1
     },
     "class_type": "EmptyHunyuanLatentVideo",
