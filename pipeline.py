@@ -25,7 +25,7 @@ RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG = False#'audio'
 
-from utilites.subtitles import format_time, generate_subtitles, ffmpeg_safe_path, burn_subtitles, create_full_subtitles, create_video_with_subtitles, clean_text_captions
+from utilites.subtitles import create_full_subtitles, create_video_with_subtitles
 
 async def generate_story(provider="qwen"):
     prompt = (
@@ -47,6 +47,7 @@ async def generate_story(provider="qwen"):
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
         "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
+        "Do not write anything else in output\n"
     )
     return await generate_response_allmy(provider, prompt)
 
@@ -137,6 +138,7 @@ def update_blocks_with_real_duration(blocks):
                 print(f"⚠️ Could not get duration for {video_path}: {e}")
     return blocks
 
+from datetime import datetime
     
 def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
     video_paths = []
@@ -145,6 +147,10 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
         duration = blk.get('duration', 10)
         if not isinstance(duration, int) or duration > 10 or duration <= 0:
             duration = 10
+            
+        timestamp = datetime.now().strftime("%H:%M")
+        print(f"⌛ Waiting for completion... [{timestamp}]")
+        
         clip = wan_2_1_t2v_gguf_api(blk['visual'],  video_seconds=duration)
         
         # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
@@ -159,7 +165,7 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
             print(f"⚠️ No clip found for scene {idx}")
     return video_paths
 
-def each_audio_scene(video_path, prompt, negative_prompt="low quality, noise, music", idx=1, newname=None, volumelevel=0.7):
+def each_audio_scene(video_path, prompt, negative_prompt="low quality, noise, music, song", idx=1, newname=None, volumelevel=0.7):
         print(f"🔊 Adding audio to {video_path}")
         audio_clip = run_video2audio(video_path=video_path, prompt=prompt, negative_prompt=negative_prompt)
         if audio_clip:
@@ -364,7 +370,7 @@ async def main():
     clean_comfy_output(COMFY_OUTPUT_DIR)  
     
 
-    DEBUG = False
+    DEBUG = True
     if DEBUG:
         print("DEBUG mode: skip requesting new blocks.")
         meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
@@ -377,16 +383,16 @@ async def main():
        
     print(f"Parsed {len(blocks)} scenes.")
 
-    vids = generate_videos(blocks) # generate videos from blocks
-    vids = list_files_in_result("scene_*_video.webm","result") 
-    blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
-    blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
-    vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
+    # vids = generate_videos(blocks) # generate videos from blocks
+    # vids = list_files_in_result("scene_*_video.webm","result") 
+    # blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
+    # blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
+    # vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
 
-    vids = list_files_in_result("scene_*_audio.mp4","result") 
-    vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
+    # vids = list_files_in_result("scene_*_audio.mp4","result") 
+    # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
     #combined block audio
-    #generate_combined_tts_audio(blocks, "result/combined_voice.wav")
+    ##generate_combined_tts_audio(blocks, "result/combined_voice.wav")
     
     for idx, blk in enumerate(blocks, 1):
       generate_audio_from_text(blk["text"], output_path=f"result/scene_{idx:02d}_voice.wav")

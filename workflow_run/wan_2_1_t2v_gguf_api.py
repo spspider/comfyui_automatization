@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 import shutil
 
-def wan_2_1_t2v_gguf_api(prompt, negative_prompt="Overexposure, static, blurred details, subtitles, paintings, pictures, still, overall gray, worst quality, low quality, JPEG compression residue, ugly, mutilated, redundant fingers, poorly painted hands, poorly painted faces, deformed, disfigured, deformed limbs, fused fingers, cluttered background, three legs, a lot of people in the background, upside down", workflow_path="workflows/wan-2.1-t2v-gguf_api.json", video_seconds=5):
+def wan_2_1_t2v_gguf_api(prompt, negative_prompt=None, workflow_path="workflows/wan-2.1-t2v-gguf_api_q1.json", video_seconds=5):
     COMFY_URL = "http://127.0.0.1:8188"
     OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")
     RESULT_DIR = Path("result")
@@ -24,10 +24,10 @@ def wan_2_1_t2v_gguf_api(prompt, negative_prompt="Overexposure, static, blurred 
         workflow["6"]["inputs"]["text"] = prompt
     else:
         raise ValueError("Node 6 (positive prompt) not found")
-    if "7" in workflow:
-        workflow["7"]["inputs"]["text"] = negative_prompt
-    else:
-        raise ValueError("Node 7 (negative prompt) not found")
+    # if "7" in workflow:
+    #     workflow["7"]["inputs"]["text"] = negative_prompt
+    # else:
+    #     raise ValueError("Node 7 (negative prompt) not found")
 
     if "40" in workflow:
         workflow["40"]["inputs"]["length"] = frame_count
@@ -55,7 +55,7 @@ def wan_2_1_t2v_gguf_api(prompt, negative_prompt="Overexposure, static, blurred 
     print(f"✅ Prompt submitted. ID: {prompt_id}")
 
     # Wait for completion
-    print("⌛ Waiting for completion...")
+    # print("⌛ Waiting for completion...")
     while True:
         r = requests.get(f"{COMFY_URL}/history/{prompt_id}")
         if r.status_code == 200:
