@@ -30,10 +30,8 @@ from utilites.subtitles import format_time, generate_subtitles, ffmpeg_safe_path
 async def generate_story(provider="qwen"):
     prompt = (
         "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, like wall transformation etc, dances, pet tricks, and transformation videos. Write a complete and structured script for a 30 second video.\n"
-        "Each scene will be started by AI video generator, separately, without context, that's why you need to repeat description of what you doing in each scene and context.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
-        "In a captions you have to specify ingridients or steps, reciepts, if they are, think deeply how to do it, it is very vital.\n"
-        "YOU HAVE TO DESCRIBE CHARACTERS OR OBJECTS IN EACH SCENE FROM THE BEGINNING, AS THIS VIDEO GENERATES SEPARATELY, SO PROVIDE CONTEXT\n"
+        "REPEAT DESCRIPTION OF WHAT YOU DOING IN EACH SCENE\n"
         "Respond using the exact format below for each scene:\n"
         "\n"
         "**VIDEO_Title:** video title, short\n"
@@ -43,13 +41,12 @@ async def generate_story(provider="qwen"):
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
-        "**Visual:** Describe the scene. Use at least 10 sentences including background and foreground very detailed.\n"
+        "**Visual:** Describe the scene. Repeat description of main characters in each scene. dont use names, dont use \"same\". start description from beggining. Use at least 10 sentences including background and foreground very detailed.\n"
         "**Sound:** Describe the sound. latest scene should be with music for subscribers\n"
         "**Text:** On-screen scene captions,some words, use emotions like wow, exclamation marks etc, 2-3 words.\n"
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
         "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
-        "negative prompt: coffee cups"
     )
     return await generate_response_allmy(provider, prompt)
 
@@ -148,10 +145,10 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
         duration = blk.get('duration', 10)
         if not isinstance(duration, int) or duration > 10 or duration <= 0:
             duration = 10
-        # clip = wan_2_1_t2v_gguf_api(blk['visual'], negative_prompt, video_seconds=duration)
+        clip = wan_2_1_t2v_gguf_api(blk['visual'],  video_seconds=duration)
         
         # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
-        clip = run_text2video(blk['visual'])
+        # clip = run_text2video(blk['visual'])
         if clip:
             new_name = RESULT_DIR / f"scene_{idx:02d}_video.webm"  # Format index as 2-digit number
             shutil.move(Path(clip), str(new_name))  # Rename the file

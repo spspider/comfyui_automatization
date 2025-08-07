@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 import shutil
 
-def wan_2_1_t2v_gguf_api(prompt, negative_prompt, workflow_path="workflows/wan-2.1-t2v-gguf_api.json", video_seconds=5):
+def wan_2_1_t2v_gguf_api(prompt, negative_prompt="Overexposure, static, blurred details, subtitles, paintings, pictures, still, overall gray, worst quality, low quality, JPEG compression residue, ugly, mutilated, redundant fingers, poorly painted hands, poorly painted faces, deformed, disfigured, deformed limbs, fused fingers, cluttered background, three legs, a lot of people in the background, upside down", workflow_path="workflows/wan-2.1-t2v-gguf_api.json", video_seconds=5):
     COMFY_URL = "http://127.0.0.1:8188"
     OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")
     RESULT_DIR = Path("result")

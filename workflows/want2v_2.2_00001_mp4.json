@@ -76,7 +76,7 @@
   },
   "57": {
     "inputs": {
-      "frame_rate": 24,
+      "frame_rate": 16,
       "loop_count": 0,
       "filename_prefix": "want2v_Wan2.2",
       "format": "video/h264-mp4",
@@ -164,7 +164,7 @@
   },
   "85": {
     "inputs": {
-      "unet_name": "Wan2.2_T2V_High_Noise_14B_VACE-Q4_0.gguf",
+      "unet_name": "Wan2.2_T2V_High_Noise_14B_VACE-Q4_K_S.gguf",
       "device": "cuda:0",
       "virtual_vram_gb": 22,
       "use_other_vram": false,
@@ -189,7 +189,7 @@
   },
   "90": {
     "inputs": {
-      "unet_name": "Wan2.2_T2V_Low_Noise_14B_VACE-Q4_0.gguf",
+      "unet_name": "Wan2.2_T2V_Low_Noise_14B_VACE-Q4_K_S.gguf",
       "device": "cuda:0",
       "virtual_vram_gb": 22,
       "use_other_vram": false,

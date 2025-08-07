@@ -1,7 +1,7 @@
 {
   "3": {
     "inputs": {
-      "seed": 300841457357670,
+      "seed": 92682429307839,
       "steps": 30,
       "cfg": 6,
       "sampler_name": "uni_pc",
@@ -93,9 +93,9 @@
   },
   "40": {
     "inputs": {
-      "width": 832,
-      "height": 480,
-      "length": 33,
+      "width": 480,
+      "height": 832,
+      "length": 81,
       "batch_size": 1
     },
     "class_type": "EmptyHunyuanLatentVideo",
@@ -127,7 +127,7 @@
   },
   "50": {
     "inputs": {
-      "unet_name": "wan2.1-t2v-14b-Q4_K_S.gguf"
+      "unet_name": "wan2.1-t2v-14b-Q3_K_S.gguf"
     },
     "class_type": "UnetLoaderGGUF",
     "_meta": {

@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 
-def run_text2video(prompt, negative_prompt =None, workflow_path="workflows/want2v_2.2_api_mp4_vace.json", video_seconds=5):
+def run_text2video(prompt, negative_prompt =None, workflow_path="workflows/want2v_2.2_00001_mp4.json", video_seconds=5):
     COMFY_URL = "http://127.0.0.1:8188"
     OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/")
     RESULT_DIR = Path("c:/AI/comfyui_automatization/result/")
