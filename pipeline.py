@@ -25,13 +25,13 @@ COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
-DEBUG = False#'audio'
+DEBUG = False
 
 from utilites.subtitles import create_full_subtitles, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, Write a complete and structured script for a 30 second video.\n"
+        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, animations, beautiful instagramm womans, Write a complete and structured script for a 30 second video.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
         "REPEAT DESCRIPTION OF WHAT YOU DOING IN EACH SCENE\n"
         "Respond using the exact format below for each scene:\n"
@@ -55,6 +55,7 @@ async def generate_story(provider="qwen"):
     return await generate_response_allmy(provider, prompt)
 
 def parse_story_blocks(story_text):
+    story_text = re.sub(r'<think>.*?</think>', '', story_text, flags=re.DOTALL).strip()
     meta = {}
     # Parse metadata
     meta_match = re.search(
@@ -219,16 +220,29 @@ def combine_videos(video_list, video_title="final_movie", output_path=RESULT_DIR
 async def get_story_blocks_with_retries(provider, result_dir, max_attempts=3):
     """Try to generate and parse story blocks, retrying if parsing fails."""
     for attempt in range(max_attempts):
-        story = await generate_story(provider=provider)
-        print("\n--- Scenario ---\n", story)
-        # Save story to result folder as txt
-        story_file = result_dir / "story.txt"
-        with open(story_file, "w", encoding="utf-8") as f:
-            f.write(story)
-        meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
-        return meta, blocks
-    print(f"❌ Failed to parse structured output after {max_attempts} attempts.")
-    return None
+        try:
+            story = await generate_story(provider=provider)
+            print("\n--- Scenario ---\n", story)
+            # Save story to result folder as txt
+            story_file = result_dir / "story.txt"
+            try:
+                with open(story_file, "w", encoding="utf-8") as f:
+                    f.write(story)
+                meta, blocks = parse_story_blocks((result_dir / "story.txt").read_text(encoding="utf-8"))
+                if meta and blocks:  # Ensure valid output
+                    return meta, blocks
+                else:
+                    print(f"⚠️ Attempt {attempt + 1}: Parsed output is empty or invalid.")
+            except Exception as e:
+                print(f"⚠️ Attempt {attempt + 1}: Failed to parse story: {e}")
+                continue  # Retry on parsing failure
+
+        except Exception as e:
+            print(f"⚠️ Attempt {attempt + 1}: Failed to generate story: {e}")
+            continue  # Retry on story generation failure
+
+    print(f"❌ Failed to generate or parse structured output after {max_attempts} attempts.")
+    return None, []
 
 def clean_comfy_output(DIR=COMFY_OUTPUT_DIR):
     """Remove all files from ComfyUI output directory"""
@@ -383,11 +397,10 @@ async def main():
         meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
     else:
         clean_comfy_output(RESULT_DIR)  
-        meta, blocks = await get_story_blocks_with_retries("GPT", RESULT_DIR)
+        meta, blocks = await get_story_blocks_with_retries("qwen", RESULT_DIR)
     if not blocks:
         return
-
-       
+   
     print(f"Parsed {len(blocks)} scenes.")
     
     vids = generate_videos(blocks,meta) # generate videos from blocks

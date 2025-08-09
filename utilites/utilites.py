@@ -83,20 +83,12 @@ def reduce_audio_volume(video_in, video_out, volume=0.7):
         shutil.move(str(temp_output), str(video_out))
         
 def sanitize_filename(filename):
-    """
-    Sanitize a filename by replacing invalid characters and handling edge cases.
-    Removes all invalid Windows filename characters, leading/trailing spaces,
-    and ensures the filename is not a reserved name.
-    """
-    filename = str(filename).strip()  # Remove leading/trailing whitespace
-    # Replace invalid characters with underscore
-    filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', filename)
-    # Replace multiple underscores with a single one
-    filename = re.sub(r'_+', '_', filename)
-    # Remove leading/trailing underscores
-    filename = filename.strip('_')
-    # If filename is empty or invalid, provide a default
-    if not filename or filename in {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}:
-        filename = "default_filename"
-    # Truncate to avoid Windows path length issues (max 255 chars)
-    return filename[:255]        
+    """Sanitize a string to be safe for use as a filename."""
+    # Keep only alphanumeric characters, underscores, hyphens, and dots
+    filename = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+    # Remove leading/trailing dots or spaces
+    filename = filename.strip('. _')
+    # Limit length to avoid issues (e.g., 100 characters)
+    filename = filename[:100]
+    # Ensure non-empty filename
+    return filename or "default_filename" 
