@@ -1,7 +1,19 @@
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import re
+sys.path.append(r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
+import gc
+import torch
 
+def clear_vram():
+    """Clear VRAM by collecting garbage and emptying CUDA cache."""
+    gc.collect()  # Collect Python garbage
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()  # Clear CUDA memory cache
+        torch.cuda.synchronize()  # Ensure all GPU operations are complete
+    print("🧹 VRAM cleared.")
 
 def convert_to_mp4(source_path, duration=3):
     """
@@ -69,3 +81,22 @@ def reduce_audio_volume(video_in, video_out, volume=0.7):
         ], check=True)
         # Replace original with processed version
         shutil.move(str(temp_output), str(video_out))
+        
+def sanitize_filename(filename):
+    """
+    Sanitize a filename by replacing invalid characters and handling edge cases.
+    Removes all invalid Windows filename characters, leading/trailing spaces,
+    and ensures the filename is not a reserved name.
+    """
+    filename = str(filename).strip()  # Remove leading/trailing whitespace
+    # Replace invalid characters with underscore
+    filename = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', filename)
+    # Replace multiple underscores with a single one
+    filename = re.sub(r'_+', '_', filename)
+    # Remove leading/trailing underscores
+    filename = filename.strip('_')
+    # If filename is empty or invalid, provide a default
+    if not filename or filename in {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}:
+        filename = "default_filename"
+    # Truncate to avoid Windows path length issues (max 255 chars)
+    return filename[:255]        

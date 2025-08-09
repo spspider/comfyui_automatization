@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import json
 from pathlib import Path
+from datetime import datetime
 from moviepy import concatenate_videoclips, VideoFileClip
 from utilites.text2audioZonos import generate_audio_from_text
 from utilites.upload_youtube import upload_video
@@ -15,9 +16,10 @@ from utilites.upload_youtube import upload_video
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
-from utilites.utilites import reduce_audio_volume
+from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename
 from workflow_run.video2audio_workflow import run_video2audio
 from workflow_run.wan_2_1_t2v_gguf_api import wan_2_1_t2v_gguf_api
+
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
@@ -25,11 +27,11 @@ RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG = False#'audio'
 
-from utilites.subtitles import create_full_subtitles, create_video_with_subtitles
+from utilites.subtitles import create_full_subtitles, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, like wall transformation etc, dances, pet tricks, and transformation videos. Write a complete and structured script for a 30 second video.\n"
+        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, Write a complete and structured script for a 30 second video.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
         "REPEAT DESCRIPTION OF WHAT YOU DOING IN EACH SCENE\n"
         "Respond using the exact format below for each scene:\n"
@@ -38,12 +40,13 @@ async def generate_story(provider="qwen"):
         "**VIDEO_Description:** description about content, will be use for youtube.\n"
         "**VIDEO_Hashtags:** hash tags, separated by commas 1-3\n"
         "**Overall_Music:** Description of the music according all content\n"
+        "**characters:** this block will apeear in each scene for visual description of characters, use names of characters to separate them, be very detailed.\n"
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Opening Hook\n"
-        "**Visual:** Describe the scene. Repeat description of main characters in each scene. dont use names, dont use \"same\". start description from beggining. Use at least 10 sentences including background and foreground very detailed.\n"
+        "**Visual:** Describe the scene. use characters block for visual description, it will added here. Use at least 10 sentences including background and foreground very detailed.\n"
         "**Sound:** Describe the sound. latest scene should be with music for subscribers\n"
-        "**Text:** On-screen scene captions,some words, use emotions like wow, exclamation marks etc, 2-3 words.\n"
+        "**Text:** On-screen scene captions,some words, use emotions like wow, exclamation marks etc, 3-5 words.\n"
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
         "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
@@ -53,12 +56,13 @@ async def generate_story(provider="qwen"):
 
 def parse_story_blocks(story_text):
     meta = {}
-    # Updated regex to include Overall_Music
+    # Parse metadata
     meta_match = re.search(
         r'\*\*VIDEO_Title:\*\*\s*(.*?)\s*\n'
         r'\*\*VIDEO_Description:\*\*\s*(.*?)\s*\n'
         r'\*\*VIDEO_Hashtags:\*\*\s*(.*?)\s*\n'
-        r'\*\*Overall_Music:\*\*\s*(.*?)\s*(?=\n\*\*\[\d{2}:\d{2}-\d{2}:\d{2}\]\*\*|\Z)',
+        r'\*\*Overall_Music:\*\*\s*(.*?)\s*\n'
+        r'\*\*characters:\*\*\s*(.*?)\s*(?=\n\*\*\[\d{2}:\d{2}-\d{2}:\d{2}\]\*\*|\Z)',
         story_text,
         re.DOTALL
     )
@@ -67,57 +71,61 @@ def parse_story_blocks(story_text):
             "video_title": meta_match.group(1).strip(),
             "video_description": meta_match.group(2).strip(),
             "video_hashtags": meta_match.group(3).strip(),
-            "overall_music": meta_match.group(4).strip()
+            "overall_music": meta_match.group(4).strip(),
+            "characters": meta_match.group(5).strip()
         }
 
+    # Updated regex to make Title optional and improve scene matching
     pattern = re.compile(
         r'\*\*\[(\d{2}:\d{2})-(\d{2}:\d{2})\]\*\*\s*'
-        r'\*\*Title:\*\*\s*(.*?)\s*'
-        r'\*\*Visual:\*\*\s*(.*?)\s*'
-        r'\*\*Sound:\*\*\s*(.*?)\s*'
-        r'\*\*Text:\*\*\s*(.*?)(?=\n\*\*\[\d{2}:\d{2}-\d{2}:\d{2}\]\*\*|\Z)',
+        r'(?:\*\*Title:\*\*\s*(.*?)\s*\n)?'  # Make Title optional
+        r'\*\*Visual:\*\*\s*(.*?)\s*\n'
+        r'\*\*Sound:\*\*\s*(.*?)\s*\n'
+        r'\*\*Text:\*\*\s*(.*?)\s*(?=\n\*\*\[\d{2}:\d{2}-\d{2}:\d{2}\]\*\*|\Z)',
         re.DOTALL
     )
 
     scenes = []
-    for match in pattern.findall(story_text):
-        start_str, end_str, title, visual, sound, text = match
+    for match in pattern.finditer(story_text):
+        start_str, end_str, title, visual, sound, text = match.groups()
         def to_sec(t):
             minutes, seconds = map(int, t.split(":"))
             return minutes * 60 + seconds
         duration = to_sec(end_str) - to_sec(start_str)
         scenes.append({
-            "title": title.strip(),
+            "title": title.strip() if title else "",  # Handle missing title
             "visual": visual.strip(),
             "sound": sound.strip(),
             "text": text.strip(),
             "duration": duration
         })
     
+    # Print metadata and scenes
     print(f"🎬 Title: {meta['video_title']}")
     print(f"📝 Description: {meta['video_description']}")
     print(f"🏷️ Hashtags: {meta['video_hashtags']}")
     print(f"🎵 Overall Music: {meta['overall_music']}")
+    print(f"👥 Characters: {meta['characters']}")
     print(f"⏱️ Duration: {sum(scene['duration'] for scene in scenes)} seconds")
     
     # Save meta to video_output directory
     video_output_dir = Path("video_output")
     video_output_dir.mkdir(exist_ok=True)
-    meta_file = video_output_dir / f"{sanitize_filename(meta['video_title'].replace(' ', '_'))}.json"
+    meta_file = video_output_dir / f"{sanitize_filename(meta['video_title'])}.json"  # Use sanitize_filename
     with open(meta_file, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
     
     for idx, blk in enumerate(scenes, 1):
         print(f"[Scene {idx}]")
-        print(f"  Title: {blk.get('title')}")
+        print(f"  Title: {blk.get('title') or 'No Title'}")
         print(f"  Visual: {blk.get('visual')}")
         print(f"  Sound: {blk.get('sound')}")
         print(f"  Text: {blk.get('text')}")
         print(f"  Duration: {blk.get('duration')}")
         print("-" * 40)
     
+    print(f"Parsed {len(scenes)} scenes.")
     return meta, scenes
-
 
 
 
@@ -140,7 +148,7 @@ def update_blocks_with_real_duration(blocks):
 
 from datetime import datetime
     
-def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
+def generate_videos(blocks, meta, negative_prompt="low quality, distorted, static"):
     video_paths = []
     for idx, blk in enumerate(blocks, 1):
         print(f"[Scene {idx}] Generating: {blk['title']}")
@@ -150,19 +158,20 @@ def generate_videos(blocks, negative_prompt="low quality, distorted, static"):
             
         timestamp = datetime.now().strftime("%H:%M")
         print(f"⌛ Waiting for completion... [{timestamp}]")
-        
-        clip = wan_2_1_t2v_gguf_api(blk['visual'],  video_seconds=duration)
-        
+        positive_prompt = meta['characters'] + "\n" + blk['visual']
+        clip = wan_2_1_t2v_gguf_api(positive_prompt,  video_seconds=duration)
+
         # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
         # clip = run_text2video(blk['visual'])
         if clip:
-            new_name = RESULT_DIR / f"scene_{idx:02d}_video.webm"  # Format index as 2-digit number
+            new_name = RESULT_DIR / f"scene_{idx:02d}_video.mp4"  # Format index as 2-digit number
             shutil.move(Path(clip), str(new_name))  # Rename the file
             # os.unlink(clip)  # Remove the original file
             video_paths.append(str(new_name))
             print(f"✅ Video for scene {idx} saved as: {new_name}")
         else:
             print(f"⚠️ No clip found for scene {idx}")
+        clear_vram()
     return video_paths
 
 def each_audio_scene(video_path, prompt, negative_prompt="low quality, noise, music, song", idx=1, newname=None, volumelevel=0.7):
@@ -179,6 +188,7 @@ def each_audio_scene(video_path, prompt, negative_prompt="low quality, noise, mu
         else:
             print(f"⚠️ No audio clip found for scene {idx}, using original.")
             newname = str(video_path)
+        clear_vram()
         return newname
 
 def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise, music"):
@@ -192,10 +202,6 @@ def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise
 
 
 
-
-def sanitize_filename(filename):
-    import re
-    return re.sub(r'[<>:"/\\|?*]', '_', str(filename))
 
 def combine_videos(video_list, video_title="final_movie", output_path=RESULT_DIR):
     if not video_list:
@@ -362,6 +368,8 @@ def generate_combined_tts_audio(blocks, output_path):
 
 
 
+
+
 def list_files_in_result(pattern, result_dir=None):
     result_dir = Path(r"C:/AI/comfyui_automatization/"+result_dir)
     return sorted([file for file in result_dir.glob(pattern) if file.is_file()])    
@@ -370,33 +378,33 @@ async def main():
     clean_comfy_output(COMFY_OUTPUT_DIR)  
     
 
-    DEBUG = True
     if DEBUG:
         print("DEBUG mode: skip requesting new blocks.")
         meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
     else:
         clean_comfy_output(RESULT_DIR)  
-        meta, blocks = await get_story_blocks_with_retries("qwen", RESULT_DIR)
+        meta, blocks = await get_story_blocks_with_retries("GPT", RESULT_DIR)
     if not blocks:
         return
 
        
     print(f"Parsed {len(blocks)} scenes.")
-
-    # vids = generate_videos(blocks) # generate videos from blocks
-    # vids = list_files_in_result("scene_*_video.webm","result") 
-    # blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
-    # blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
-    # vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
-
-    # vids = list_files_in_result("scene_*_audio.mp4","result") 
-    # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
-    #combined block audio
-    ##generate_combined_tts_audio(blocks, "result/combined_voice.wav")
     
+    vids = generate_videos(blocks,meta) # generate videos from blocks
+    vids = list_files_in_result("scene_*_video.*","result") 
+    blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
+    blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
+    vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
+    
+    vids = list_files_in_result("scene_*_audio.mp4","result") 
+    vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
+    ###combined block audio
+    ####generate_combined_tts_audio(blocks, "result/combined_voice.wav")
+
     for idx, blk in enumerate(blocks, 1):
       generate_audio_from_text(blk["text"], output_path=f"result/scene_{idx:02d}_voice.wav")
-    
+    timestamp = datetime.now().strftime('%H:%M')
+    print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")
     for idx, blk in enumerate(blocks, 1):
         merge_audio_and_video(
             blocks=blocks,
@@ -407,6 +415,9 @@ async def main():
     # vids = list_files_in_result("scene_*_audio_subtitled.mp4","result") 
     vids = list_files_in_result("scene_*_merged.mp4","result") 
     video = combine_videos(vids, "final_movie", output_path=Path("result/"))
+    ###ADDING MUSIC
+    timestamp = datetime.now().strftime('%H:%M')
+    print(f"⌛ TIMESTAMP each_audio_scene [{timestamp}]")
     newname = each_audio_scene(RESULT_DIR/"final_movie.mp4", meta["overall_music"],  negative_prompt="low quality, noise",  newname=RESULT_DIR / f"final_movie_music.mp4", volumelevel=0.1)
     merge_audio_and_video(
         blocks=blocks,
@@ -414,13 +425,15 @@ async def main():
         video_path=RESULT_DIR / "final_movie.mp4",
         output_path=f"video_output/{sanitize_filename(meta['video_title'])}.mp4"
     )
+    timestamp = datetime.now().strftime('%H:%M')
+    print(f"⌛ TIMESTAMP [{timestamp}]")
     subtitle_file = create_full_subtitles(blocks)
     
     subtitle_output = Path("video_output") / f"{sanitize_filename(meta['video_title'])}.srt"
     shutil.copy(subtitle_file, subtitle_output)
     print(f"📝 Subtitle file saved to: {subtitle_output}")
     
-    
+    clear_vram()
     #############END#############
     # # video = Path("result/The Coffee Cup That Stole the Internet.mp4")
     # merge_audio_and_video(blocks, 

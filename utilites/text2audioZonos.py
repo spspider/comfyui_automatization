@@ -9,7 +9,7 @@ import torchaudio
 import random
 import gc
 sys.path.append(r"C:\AI\Zonos-for-windows")
-
+from utilites.utilites import clear_vram
 from zonos.model import Zonos
 from zonos.conditioning import make_cond_dict
 from zonos.utils import DEFAULT_DEVICE as device
@@ -18,6 +18,7 @@ from zonos.utils import DEFAULT_DEVICE as device
 torch.cuda.empty_cache()
 gc.collect()
 print("🧽 CUDA VRAM cleared")
+clear_vram()
 def generate_audio_from_text(
     text,
     speaker_audio_path=None,
