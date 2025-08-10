@@ -31,8 +31,9 @@ from utilites.subtitles import create_full_subtitles, create_video_with_subtitle
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, animations, beautiful instagramm womans, Write a complete and structured script for a 30 second video.\n"
+        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, animations, beautiful instagramm womans, Write a complete and structured scene for a 30 second video.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
+        "ATTENTION! video blocks will be driven separately, so if one scene contain some created context, you have to repeat it next, for example, woman start dress in red, in next scene should be dressed in red woman and so on\n"
         "REPEAT DESCRIPTION OF WHAT YOU DOING IN EACH SCENE\n"
         "Respond using the exact format below for each scene:\n"
         "\n"
