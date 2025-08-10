@@ -27,11 +27,11 @@ RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG = False
 
-from utilites.subtitles import create_full_subtitles, create_video_with_subtitles, clean_text_captions, burn_subtitles 
+from utilites.subtitles import create_full_subtitles_text, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral video content creator. You are using AI to generate a video. Generate a mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, animations, beautiful instagramm womans, Write a complete and structured scene for a 30 second video.\n"
+        "You are a viral video content creator. You are using AI to generate a video. Generate little story of mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, animations, beautiful instagramm womans, it may be cartoon animations. Write a complete and structured scene for a 1 minute video.\n"
         "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
         "ATTENTION! video blocks will be driven separately, so if one scene contain some created context, you have to repeat it next, for example, woman start dress in red, in next scene should be dressed in red woman and so on\n"
         "REPEAT DESCRIPTION OF WHAT YOU DOING IN EACH SCENE\n"
@@ -47,7 +47,7 @@ async def generate_story(provider="qwen"):
         "**Title:** Opening Hook\n"
         "**Visual:** Describe the scene. use characters block for visual description, it will added here. Use at least 10 sentences including background and foreground very detailed.\n"
         "**Sound:** Describe the sound. latest scene should be with music for subscribers\n"
-        "**Text:** On-screen scene captions,some words, use emotions like wow, exclamation marks etc, 3-5 words.\n"
+        "**Text:** On-screen scene captions, write what you want to say, use emotions like wow, exclamation marks etc, 3-8 words including ingredients if they are.\n"
         "---\n"
         "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
         "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
@@ -72,7 +72,7 @@ def parse_story_blocks(story_text):
         meta = {
             "video_title": meta_match.group(1).strip(),
             "video_description": meta_match.group(2).strip(),
-            "video_hashtags": meta_match.group(3).strip(),
+            "video_hashtags": meta_match.group(3).strip().lower(),
             "overall_music": meta_match.group(4).strip(),
             "characters": meta_match.group(5).strip()
         }
@@ -322,51 +322,110 @@ def burn_tts_to_video(video_paths, blocks):
 def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None):
     """
     Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
-    If the video has no audio, use only TTS.
+    If the video is shorter than the audio, loop the necessary part from the end of the video to match the audio duration.
+    If the video has no audio, use only TTS. If it has audio, mix it with TTS.
     """
     ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
+    ffprobe = r"c:\ProgramData\chocolatey\bin\ffprobe.exe"
 
-    # Check if video has audio
-    probe_cmd = [
-        ffmpeg, "-i", Path(video_path),
-        "-hide_banner", "-loglevel", "error", "-show_streams", "-select_streams", "a", "-of", "default=noprint_wrappers=1:nokey=1"
-    ]
+    # Get durations of video and audio
+    def get_duration(file_path):
+        cmd = [
+            ffprobe, "-v", "error", "-show_entries", "format=duration",
+            "-of", "json", str(file_path)
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return float(json.loads(result.stdout)["format"]["duration"])
+
+    video_duration = get_duration(video_path)
+    audio_duration = get_duration(audio_path)
+
+    # Check if the original video has audio
     has_audio = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "a",
+        [
+            ffprobe, "-v", "error", "-select_streams", "a",
             "-show_entries", "stream=codec_type",
             "-of", "default=noprint_wrappers=1:nokey=1",
-            str(video_path)],
+            str(video_path)
+        ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    ).stdout.decode().strip() != ""
+        stderr=subprocess.PIPE,
+        text=True
+    ).stdout.strip() != ""
 
+    temp_video = None
+    # If audio is longer than video, create a looped video
+    if audio_duration > video_duration:
+        print(f"🎥 Audio ({audio_duration}s) is longer than video ({video_duration}s) — looping video.")
+        temp_video = Path(output_path).with_suffix(".temp.mp4")
+        loop_duration = audio_duration - video_duration
+        loop_start = max(0, video_duration - loop_duration)
+        # Include audio in the looped video if it exists
+        if has_audio:
+            cmd_loop = [
+                ffmpeg, "-y",
+                "-i", str(video_path),
+                "-filter_complex",
+                f"[0:v]trim=start={loop_start}:duration={loop_duration},setpts=PTS-STARTPTS[vloop];"
+                f"[0:v][vloop]concat=n=2:v=1:a=0[vout];"
+                f"[0:a]atrim=start={loop_start}:duration={loop_duration},asetpts=PTS-STARTPTS[aloop];"
+                f"[0:a][aloop]concat=n=2:v=0:a=1[aout]",
+                "-map", "[vout]", "-map", "[aout]",
+                "-c:v", "libx264", "-c:a", "aac", "-preset", "fast",
+                str(temp_video)
+            ]
+        else:
+            cmd_loop = [
+                ffmpeg, "-y",
+                "-i", str(video_path),
+                "-filter_complex",
+                f"[0:v]trim=start={loop_start}:duration={loop_duration},setpts=PTS-STARTPTS[vloop];"
+                f"[0:v][vloop]concat=n=2:v=1:a=0[vout]",
+                "-map", "[vout]",
+                "-c:v", "libx264", "-preset", "fast",
+                str(temp_video)
+            ]
+        try:
+            subprocess.run(cmd_loop, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to loop video {video_path}: {e}")
+            return None
+        video_path = temp_video  # Use the looped video for merging
+
+    # Merge audio and video
     if has_audio:
         print(f"🎧 Scene has audio — mixing with TTS.")
         cmd = [
             ffmpeg, "-y",
-            "-i", Path(video_path),
-            "-i", Path(audio_path),
+            "-i", str(video_path),
+            "-i", str(audio_path),
             "-filter_complex",
             "[0:a]volume=0.6[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
             "-map", "0:v", "-map", "[aout]",
-            "-c:v", "copy", "-c:a", "aac", "-shortest",
-            Path(output_path)
+            "-c:v", "copy", "-c:a", "aac",
+            "-shortest", str(output_path)
         ]
     else:
         print(f"🔈 Scene has no audio — adding only TTS.")
         cmd = [
             ffmpeg, "-y",
-            "-i", Path(video_path),
-            "-i", Path(audio_path),
+            "-i", str(video_path),
+            "-i", str(audio_path),
             "-map", "0:v", "-map", "1:a",
-            "-c:v", "copy", "-c:a", "aac", "-shortest",
-            Path(output_path)
+            "-c:v", "copy", "-c:a", "aac",
+            "-shortest", str(output_path)
         ]
 
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to merge TTS with {video_path.name}: {e}")
+        print(f"❌ Failed to merge TTS with {video_path}: {e}")
+        return None
+
+    # Clean up temporary video file if it was created
+    if temp_video and temp_video.exists():
+        temp_video.unlink()
+
     return output_path
 
 def generate_combined_tts_audio(blocks, output_path):
@@ -426,6 +485,7 @@ async def main():
             video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled.mp4",
             output_path=RESULT_DIR / f"scene_{idx:02d}_merged.mp4"
         )
+    
     # vids = list_files_in_result("scene_*_audio_subtitled.mp4","result") 
     vids = list_files_in_result("scene_*_merged.mp4","result") 
     video = combine_videos(vids, "final_movie", output_path=Path("result/"))
@@ -439,9 +499,10 @@ async def main():
         video_path=RESULT_DIR / "final_movie.mp4",
         output_path=f"video_output/{sanitize_filename(meta['video_title'])}.mp4"
     )
+    
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP [{timestamp}]")
-    subtitle_file = create_full_subtitles(blocks)
+    subtitle_file = create_full_subtitles_text(blocks)
     
     subtitle_output = Path("video_output") / f"{sanitize_filename(meta['video_title'])}.srt"
     shutil.copy(subtitle_file, subtitle_output)

@@ -110,7 +110,20 @@ def create_full_subtitles(blocks):
         f.writelines(full_subtitles)
     print(f"📝 Полные субтитры сохранены в: {full_srt_path}")
     return full_srt_path
+def create_full_subtitles_text(blocks):
+    """
+    Creates full subtitles txt file from blocks, saving only text content for YouTube subtitles.
+    """
+    full_text = []
+    for block in blocks:
+        subtitle_text = block["text"].strip().replace('\n', ' ')
+        full_text.append(subtitle_text)
 
+    full_txt_path = RESULT_DIR / "full_subtitles.txt"
+    with open(full_txt_path, "w", encoding="utf-8") as f:
+        f.write(" ".join(full_text))
+    print(f"📝 Полные субтитры сохранены в: {full_txt_path}")
+    return full_txt_path
 def create_video_with_subtitles(video_path, audio_path, subtitle_path, output_path):
     video = VideoFileClip(video_path)
     audio = AudioFileClip(audio_path)
