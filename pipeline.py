@@ -26,33 +26,34 @@ COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
-DEBUG = True
+DEBUG = False
 
 from utilites.subtitles import create_full_subtitles_text, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral video content creator. You are using AI to generate a video. Generate little story of mostly trending video scene, which is best of the popular right now, mini vlogs, DIY projects, animations, beautiful instagramm womans, it may be cartoon animations. Write a complete and structured scene for a 30 seconds video.\n"
-        "Start with a short title, a short YouTube-ready description, and relevant hashtags.\n"
-        "ATTENTION! video blocks will be driven separately, so if one scene contain some created context, you have to repeat it next, for example, woman start dress in red, in next scene should be dressed in red woman and so on\n"
-        "REPEAT DESCRIPTION OF WHAT YOU DOING IN EACH SCENE\n"
-        "Respond using the exact format below for each scene:\n"
+        "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, food challenges, DIY projects, dances, pet tricks, or transformations. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
+        "Write a complete structured script for a 30-second video, divided into exactly 6 scenes of 5 seconds each.\n"
+        "Start with a short title, a YouTube-ready description, and 1-3 relevant hashtags.\n"
+        "IMPORTANT: Treat the story as one continuous narrative. For each scene, explicitly repeat and build upon context from previous scenes (e.g., if a character wears red in scene 1, describe them as 'the character in red' in later scenes; repeat locations, actions, and states). Repeat key descriptions in Visual and Sound to maintain continuity, as scenes will be processed separately.\n"
+        "REPEAT AND BUILD ON PREVIOUS CONTEXT IN EVERY SCENE DESCRIPTION.\n"
+        "Respond using this EXACT format only:\n"
         "\n"
-        "**VIDEO_Title:** video title, short\n"
-        "**VIDEO_Description:** description about content, will be use for youtube.\n"
-        "**VIDEO_Hashtags:** hash tags, separated by commas 1-3\n"
-        "**Overall_Music:** Description of the music according all content\n"
-        "**characters:** this block will apeear in each scene for visual description of characters, use names of characters to separate them, be very detailed.\n"
+        "**VIDEO_Title:** Short, catchy video title.\n"
+        "**VIDEO_Description:** Brief description for YouTube, 1-2 sentences.\n"
+        "**VIDEO_Hashtags:** 1-3 hashtags, separated by commas.\n"
+        "**Overall_Music:** Description of background music fitting the entire video (e.g., upbeat pop track).\n"
+        "**characters:** Detailed visual descriptions of all main characters (use names to separate, e.g., 'Alice: young woman with long blonde hair, wearing casual jeans; Bob: fluffy white dog'). This will be referenced in every scene.\n"
         "\n"
         "**[00:00-00:05]**\n"
-        "**Title:** Opening Hook\n"
-        "**Visual:** Describe the scene. use characters block for visual description, it will added here. Use at least 10 sentences including background and foreground very detailed.\n"
-        "**Sound:** Describe the sound. latest scene should be with music for subscribers\n"
-        "**Text:** Screen captions, text for speaking by dictor, use emotions like wow, exclamation marks etc, 3-7 words\n"
+        "**Title:** Short scene title.\n"
+        "**Visual:** Detailed scene description, incorporating the characters block. Use at least 10 sentences covering background, foreground, actions, and visuals. Repeat context from prior scenes.\n"
+        "**Sound:** Describe ambient sounds or effects, building on prior scenes. In the last scene, include a call-to-action sound if needed.\n"
+        "**Text:** On-screen caption and narrator text in Romanian Language, you can enumerate ingredients, steps, or instructions (7-15 words, with emotions like 'Wow!' or exclamation marks) it can be more than 5 sec, feel free to put more text and storytelling elements.\n"
         "---\n"
-        "Repeat this for each 5-10 second segment of the 30 seconds story.\n"
-        "Ensure all timestamps are accurate and the output matches this exact format. at the end of the story ask for subscribe\n"
-        "Do not write anything else in output\n"
+        "Repeat for each 5-second segment: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30].\n"
+        "In the last scene's Text, include a subscribe call like 'Subscribe now!'.\n"
+        "Ensure timestamps are exact and total 30 seconds. Do not add any extra text, explanations, or variations outside this format.\n"
     )
     return await generate_response_allmy(provider, prompt)
 
@@ -503,14 +504,14 @@ async def main():
 
     print(f"Parsed {len(blocks)} scenes.")
     
-    # vids = generate_videos(blocks,meta) # generate videos from blocks
-    # vids = list_files_in_result("scene_*_video.*","result") 
-    # blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
-    # blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
-    # vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
+    vids = generate_videos(blocks,meta) # generate videos from blocks
+    vids = list_files_in_result("scene_*_video.*","result") 
+    blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
+    blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
+    vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
     
-    # vids = list_files_in_result("scene_*_audio.mp4","result") 
-    # vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
+    vids = list_files_in_result("scene_*_audio.mp4","result") 
+    vids = burn_subtitles(vids, blocks)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
     # ###combined block audio
     # ####generate_combined_tts_audio(blocks, "result/combined_voice.wav")
 
@@ -526,12 +527,9 @@ async def main():
             video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled.mp4",
             output_path=RESULT_DIR / f"scene_{idx:02d}_merged.mp4"
         )
-    return
-    # vids = list_files_in_result("scene_*_audio_subtitled.mp4","result") 
+    
     vids = list_files_in_result("scene_*_merged.mp4","result") 
-    # better to adding audio here
     video = combine_videos(vids, "final_movie", output_path=Path("result/"))
-    ###ADDING MUSIC
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP each_audio_scene [{timestamp}]")
     newname = each_audio_scene(RESULT_DIR/"final_movie.mp4", meta["overall_music"],  negative_prompt="low quality, noise",  newname=RESULT_DIR / f"final_movie_music.mp4", volumelevel=0.1)
