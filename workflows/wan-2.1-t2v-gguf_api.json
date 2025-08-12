@@ -94,7 +94,7 @@
   "40": {
     "inputs": {
       "width": 480,
-      "height": 832,
+      "height": 848,
       "length": 81,
       "batch_size": 1
     },

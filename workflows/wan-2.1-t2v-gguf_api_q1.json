@@ -93,8 +93,8 @@
   },
   "40": {
     "inputs": {
-      "width": 448,
-      "height": 800,
+      "width": 480,
+      "height": 848,
       "length": 81,
       "batch_size": 1
     },
@@ -105,7 +105,7 @@
   },
   "48": {
     "inputs": {
-      "frame_rate": 14,
+      "frame_rate": 16,
       "loop_count": 0,
       "filename_prefix": "wan",
       "format": "video/h264-mp4",

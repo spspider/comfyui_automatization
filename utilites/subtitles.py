@@ -15,25 +15,24 @@ def format_time(seconds):
     ms = int((seconds % 1) * 1000)
     return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
-def generate_subtitles(blocks):
+def generate_subtitles(blocks, lang=None):
     """
     Generate .srt files for each scene based on text and duration from blocks.
     """
     for idx, block in enumerate(blocks, 1):
         start_seconds = 0
         end_seconds = block["duration"]
-        subtitle_text = block["text"].strip().replace('\n', ' ')
+        subtitle_text = block["text"][lang].strip().replace('\n', ' ') if lang else block["text"].strip().replace('\n', ' ')
 
         srt_content = f"""1
 {format_time(start_seconds)} --> {format_time(end_seconds)}
 {subtitle_text}
 """
-
-        srt_path = RESULT_DIR / f"scene_{idx:02d}.srt"
+        srt_path = RESULT_DIR / f"scene_{idx:02d}_{lang}.srt"
         try:
             with open(srt_path, "w", encoding="utf-8") as f:
                 f.write(srt_content)
-            print(f"📝 Субтитры для сцены {idx} сохранены в: {srt_path}")
+            print(f"📝 Субтитры для сцены {idx} ({lang}) сохранены в: {srt_path}")
         except Exception as e:
             print(f"❌ Failed to write SRT file {srt_path}: {e}")
     return True
@@ -41,7 +40,7 @@ def generate_subtitles(blocks):
 def ffmpeg_safe_path(path: Path):
     return str(path.relative_to(Path.cwd())).replace('\\', '/')
 
-def burn_subtitles(video_paths, blocks):
+def burn_subtitles(video_paths, blocks, lang="en"):
     """
     Burn subtitles into videos using FFmpeg.
     """
@@ -52,14 +51,15 @@ def burn_subtitles(video_paths, blocks):
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     
     # Generate subtitles
-    if not generate_subtitles(blocks):
+    if not generate_subtitles(blocks, lang):
         print("⚠️ Subtitle generation failed, proceeding without subtitles")
         return video_paths
 
     for idx, video_path in enumerate(video_paths, 1):
         input_path = Path(video_path)
-        srt_path = RESULT_DIR / f"scene_{idx:02d}.srt"
-        output_path = RESULT_DIR / f"{input_path.stem}_subtitled.mp4"
+        srt_path = RESULT_DIR / f"scene_{idx:02d}_{lang}.srt"
+        # clean_stem = input_path.stem.split('_subtitled_')[0]
+        output_path = RESULT_DIR / f"{input_path.stem}_subtitled_{lang}.mp4"
         
         # Check if input video and SRT file exist
         if not input_path.exists():
@@ -110,16 +110,20 @@ def create_full_subtitles(blocks):
         f.writelines(full_subtitles)
     print(f"📝 Полные субтитры сохранены в: {full_srt_path}")
     return full_srt_path
-def create_full_subtitles_text(blocks):
+def create_full_subtitles_text(blocks, lang="en"):
     """
     Creates full subtitles txt file from blocks, saving only text content for YouTube subtitles.
     """
     full_text = []
     for block in blocks:
-        subtitle_text = block["text"].strip().replace('\n', ' ')
+        # Handle both string and dictionary text formats
+        if isinstance(block["text"], dict):
+            subtitle_text = block["text"][lang].strip().replace('\n', ' ')
+        else:
+            subtitle_text = block["text"].strip().replace('\n', ' ')
         full_text.append(subtitle_text)
 
-    full_txt_path = RESULT_DIR / "full_subtitles.txt"
+    full_txt_path = RESULT_DIR / f"full_subtitles_{lang}.txt"
     with open(full_txt_path, "w", encoding="utf-8") as f:
         f.write(" ".join(full_text))
     print(f"📝 Полные субтитры сохранены в: {full_txt_path}")

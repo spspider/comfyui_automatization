@@ -1,6 +1,14 @@
 import sys
 
-sys.path.append(r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
+# Удаляем старый импорт torchaudio, если он уже загружен
+if "torchaudio" in sys.modules:
+    del sys.modules["torchaudio"]
+
+# Убираем путь к torchaudio из другого окружения
+# sys.path = [p for p in sys.path if "comfyui_automatization" not in p]
+
+# Добавляем путь к нужному окружению
+sys.path.insert(0, r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Synchronous CUDA calls for better error reporting
 
@@ -22,7 +30,7 @@ clear_vram()
 def generate_audio_from_text(
     text,
     speaker_audio_path=None,
-    language="en-us",
+    language="ro", #en-us
     output_path="sample.wav",
     cfg_scale=4.47,
     fmax=24000,
@@ -33,6 +41,9 @@ def generate_audio_from_text(
     emotions=[1.0, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2],
     unconditional_keys=["emotion",  "pitch_std"]
 ):
+    # Convert 'en' to 'en-us' if needed
+    if language == "en":
+        language = "en-us"
     # Clear memory before loading
     torch.cuda.empty_cache()
     gc.collect()
