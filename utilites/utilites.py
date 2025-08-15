@@ -92,3 +92,28 @@ def sanitize_filename(filename):
     filename = filename[:100]
     # Ensure non-empty filename
     return filename or "default_filename" 
+
+import csv
+
+def create_youtube_csv(meta, video_path):
+    """
+    Create a CSV file with YouTube metadata for bulk upload.
+    Compatible with YouTube Studio's CSV format.
+    """
+    csv_path = Path(video_path).with_name("youtube_metadata.csv")
+    try:
+        with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["file_name", "title", "description", "tags", "privacy"])
+            writer.writerow([
+                Path(video_path).name,                     # file_name
+                meta.get("video_title", ""),               # title
+                meta.get("video_description", ""),         # description
+                meta.get("video_hashtags", "").replace(",", "|"),  # tags (YouTube allows | or ,)
+                "public"                                   # privacy
+            ])
+        print(f"✅ YouTube CSV metadata file created: {csv_path}")
+        return csv_path
+    except Exception as e:
+        print(f"❌ Failed to create CSV metadata file: {e}")
+        return None

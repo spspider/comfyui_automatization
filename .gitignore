@@ -23,3 +23,5 @@ mediafiles/
 .env
 **/*result/
 **/*video_output/
+*.srt
+result_debug/

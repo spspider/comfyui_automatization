@@ -17,10 +17,11 @@ from utilites.text2audioZonos import generate_audio_from_text
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
-from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename
+from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename, create_youtube_csv
 from workflow_run.video2audio_workflow import run_video2audio
 from workflow_run.wan_2_1_t2v_gguf_api import wan_2_1_t2v_gguf_api
 from utilites.argotranslate import translateTextBlocks
+from workflow_run.text_to_music_ace_step import run_text2music
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
@@ -203,7 +204,7 @@ def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise
 
     audio_video_paths = []
     for idx, (video_path, blk) in enumerate(zip(video_paths, blocks), 1):
-        newname = each_audio_scene(video_path, blk['sound'], negative_prompt, idx, newname=RESULT_DIR / f"scene_{idx:02d}_audio.mp4")
+        newname = each_audio_scene(video_path, "", negative_prompt, idx, newname=RESULT_DIR / f"scene_{idx:02d}_audio.mp4")
         audio_video_paths.append(newname)
 
     return audio_video_paths
@@ -516,8 +517,6 @@ async def main():
     for language in ["en", "ro", "ru"]:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
 
-    # ###combined block audio
-    # ####generate_combined_tts_audio(blocks, "result/combined_voice.wav")
     for language in ["en", "ro", "ru"]:
         for idx, blk in enumerate(blocks, 1):
             generate_audio_from_text(blk["text"][language], output_path=f"result/scene_{idx:02d}_voice_{language}.wav", language=language)
@@ -538,14 +537,21 @@ async def main():
         video = combine_videos(vids, f"final_movie_{language}", output_path=Path("result/"))
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP each_audio_scene [{timestamp}]")
-    newname = each_audio_scene(RESULT_DIR/"final_movie_en.mp4", meta["overall_music"],  negative_prompt="low quality, noise",  newname=RESULT_DIR / f"final_movie_music.mp4", volumelevel=0.1)
+    ####generate music
+    generated_music = run_text2music(prompt=meta["overall_music"], 
+                                     negative_prompt="low quality, noise, static, blurred details, subtitles, paintings, pictures", 
+                                     duration=VideoFileClip(str(RESULT_DIR/"final_movie_en.mp4")).duration,
+                                     output_name=RESULT_DIR / "final_movie_music.mp4")
+    
     for language in ["en", "ro", "ru"]:
+        output_path=f"video_output/{sanitize_filename(meta['video_title'])}_{language}"
         merge_audio_and_video(
             blocks=blocks,
             audio_path=RESULT_DIR / "final_movie_music.mp4",
             video_path=RESULT_DIR / f"final_movie_{language}.mp4",
-            output_path=f"video_output/{sanitize_filename(meta['video_title'])}_{language}.mp4"
+            output_path=f"{output_path}.mp4"
         )
+        create_youtube_csv(meta, output_path)
     
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP [{timestamp}]")
@@ -554,41 +560,13 @@ async def main():
         subtitle_output = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.srt"
         shutil.copy(subtitle_file, subtitle_output)
         print(f"📝 Subtitle file saved to: {subtitle_output}")
-    
+
     #save meta
     # Save meta to video_output directory
 
     meta_file = video_output_dir / f"{sanitize_filename(meta['video_title'])}.json"
     with open(meta_file, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
+
     clear_vram()
     #############END#############
-    # # video = Path("result/The Coffee Cup That Stole the Internet.mp4")
-    # merge_audio_and_video(blocks, 
-    #                       audio_path=RESULT_DIR / "combined_voice.wav", 
-    #                       video_path=video, 
-    #                       output_path=Path("video_output/") / video.name)
-    # vids = list_files_in_result("scene_*_tts.mp4","result")
-
-
-
-    # meta_json = Path("video_output") / f"{sanitize_filename(meta['video_title'])}.json"
-    # final_video = Path("video_output") / video.name.replace(".mp4", "_final.mp4")
-    
-    # upload_video(str(final_video), str(meta_json), privacy="unlisted")
-async def main2():
-    meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
-    blocks = update_blocks_with_real_duration(blocks)
-    subtitle_path = create_full_subtitles(blocks)   # 2. накладываем полные субтитры
-    create_video_with_subtitles(
-        video_path="result/video_final.mp4",
-        audio_path="result/combined_voice.wav",
-        subtitle_path=subtitle_path,
-        output_path="result/video_final_subbed.mp4"
-    )
-if __name__ == '__main__':
-    if DEBUG:
-        asyncio.run(main())
-    else:
-        while True:
-            asyncio.run(main())
