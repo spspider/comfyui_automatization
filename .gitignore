@@ -25,3 +25,5 @@ mediafiles/
 **/*video_output/
 *.srt
 result_debug/
+models/
+*.ckpt

@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 from moviepy import concatenate_videoclips, VideoFileClip
 
-# from utilites.text2audioZonos import generate_audio_from_text
+from utilites.text2audioZonos import generate_audio_from_text
 
 from utilites.text2audiof5 import run_f5_tts
 from provider_all import generate_response_allmy
@@ -586,13 +586,24 @@ async def main():
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
     blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
     print("Starting main pipeline...")
-    for language in ["en", "ru"]:
-        for idx, blk in enumerate(blocks, 1):
-            run_f5_tts(
-                language=language,
-                gen_text=blk["text"][language],
-                output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-            )
+
+
+    ####################TTS for RU########################
+    language = "ru"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        run_f5_tts(
+            language=language,
+            gen_text=blk["text"][language],
+            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################TTS for EN########################
+    language = "en"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        generate_audio_from_text(
+            language=language,
+            text=blk["text"][language],
+            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
     # output_path = run_f5_tts(
     #     language="ru",
     #     gen_text="Вау! вот это нормер!! я сияна паук+ова и это мой компьютерный голос, я хочу сделать видео с комментарием, как я играю в игру, и это будет очень интересно",
