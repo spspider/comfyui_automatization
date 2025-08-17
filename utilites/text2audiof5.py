@@ -31,7 +31,7 @@ LANGUAGE_MODELS = {
         "model_dir": r"C:\AI\comfyui_automatization\models\SpeechT5_ro",
         "ref_audio": r"C:\AI\comfyui_automatization\ref_audio\female_ro.wav",
         "ref_text": "Engineering mic dejun, pui-stil! Piramida de fier Waffle, echilibru ou-celent!",
-        "wav_name": "common_voice_ro_20349005.wav",
+        "wav_name": r"C:\AI\comfyui_automatization\ref_audio\female_ro.wav",
         "repo_id": "ionut-visan/SpeechT5_ro"
         
     }
@@ -197,7 +197,7 @@ def run_speecht5_tts(language, gen_text, output_file, ref_audio=None, ref_text=N
         )
 
     # Сохранение результата
-    sf.write(output_file, generated_waveform.cpu().numpy(), 16000, subtype="PCM_16")
+    sf.write(output_file, generated_waveform.cpu().numpy(), 44100, subtype="PCM_16")
     print(f"Speech generated and saved to '{output_file}'")
     return output_file
 

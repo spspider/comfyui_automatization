@@ -34,7 +34,7 @@ from utilites.subtitles import create_full_subtitles_text, create_video_with_sub
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, food challenges, DIY projects, dances, pet tricks, or transformations be various. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
+        "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, DIY projects, food challenges, dances, pet tricks, or transformations be various. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
         "STYLE: style of Pixar 3D animation, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, Pixar-style character design\n"
         "Write a complete structured script for a 30-second video, divided into exactly 6 scenes of 5 seconds each.\n"
         "Start with a short title, a YouTube-ready description, and 1-3 relevant hashtags.\n"
@@ -45,7 +45,7 @@ async def generate_story(provider="qwen"):
         "**VIDEO_Title:** Short, catchy video title.\n"
         "**VIDEO_Description:** Brief description for YouTube, 1-2 sentences.\n"
         "**VIDEO_Hashtags:** 1-3 hashtags, separated by commas.\n"
-        "**Overall_Music:** Description of background music fitting the entire video (e.g., upbeat pop track).\n"
+        "**Overall_Music:** Description of background music fitting the entire video, no lyrics, no words, (e.g., upbeat pop track).\n"
         "**characters:** Detailed visual descriptions of all main characters (use names to separate, e.g., 'Alice: young woman with long blonde hair, wearing casual jeans; Bob: fluffy white dog'). This will be referenced in every scene.\n"
         "\n"
         "**[00:00-00:05]**\n"
@@ -327,11 +327,19 @@ def burn_tts_to_video(video_paths, blocks):
             updated_videos.append(str(video_path))
     return updated_videos
 
-def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None):
+
+def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None, original_audio_volume=1.0):
     """
     Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
     If the video is shorter than the audio, loop the necessary part from the end of the video to match the audio duration.
     If the video has no audio, use only TTS. If it has audio, mix it with TTS.
+    
+    Args:
+        blocks: List of blocks (not used in current implementation)
+        audio_path: Path to the TTS audio file
+        video_path: Path to the input video file
+        output_path: Path for the output merged file
+        original_audio_volume: Volume level for the original video audio (default: 1.0)
     """
     ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
     ffprobe = r"c:\ProgramData\chocolatey\bin\ffprobe.exe"
@@ -363,7 +371,7 @@ def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=
     ).stdout.strip() != ""
 
     temp_video = None
-        # If audio is longer than video, create a looped video
+    # If audio is longer than video, create a looped video
     if audio_duration > video_duration:
         print(f"🎥 Audio ({audio_duration}s) is longer than video ({video_duration}s) — looping video.")
 
@@ -431,7 +439,6 @@ def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=
                 return None
             video_path = temp_video
 
-
     # Merge audio and video
     if has_audio:
         print(f"🎧 Scene has audio — mixing with TTS.")
@@ -440,7 +447,7 @@ def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=
             "-i", str(video_path),
             "-i", str(audio_path),
             "-filter_complex",
-            "[0:a]volume=0.6[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
+            f"[0:a]volume={original_audio_volume}[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
             "-map", "0:v", "-map", "[aout]",
             "-c:v", "copy", "-c:a", "aac",
             "-shortest", str(output_path)
@@ -552,7 +559,8 @@ async def main_production():
                 blocks=blocks,
                 audio_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
                 video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled_{language}.mp4",
-                output_path=RESULT_DIR / f"scene_{idx:02d}_merged_{language}.mp4"
+                output_path=RESULT_DIR / f"scene_{idx:02d}_merged_{language}.mp4",
+                original_audio_volume=0.6
             )
     for language in ["en", "ro", "ru"]:
         vids = list_files_in_result(f"scene_*_merged_{language}.mp4","result") 
@@ -561,7 +569,7 @@ async def main_production():
     print(f"⌛ TIMESTAMP each_audio_scene [{timestamp}]")
     ####generate music
     generated_music = run_text2music(prompt=meta["overall_music"], 
-                                     negative_prompt="low quality, noise, static, blurred details, subtitles, paintings, pictures", 
+                                     negative_prompt="low quality, noise, static, blurred details, subtitles, paintings, pictures, lyrics, text", 
                                      duration=VideoFileClip(str(RESULT_DIR/"final_movie_en.mp4")).duration,
                                      output_name=RESULT_DIR / "final_movie_music.mp4")
     

@@ -4,8 +4,9 @@ import os
 import time
 from pathlib import Path
 import shutil
+from utilites.utilites import reduce_audio_volume
 
-def run_text2music(prompt, negative_prompt, duration, workflow_path="workflows/ace_step_1_t2m_api.json", output_name="output.mp3"):
+def run_text2music(prompt, negative_prompt, duration, workflow_path="workflows/ace_step_1_t2m_api.json", output_name="output.mp3", volumelevel=0.1):
     COMFY_URL = "http://127.0.0.1:8188"
     OUTPUT_DIR = Path("c:/AI/ComfyUI_windows_portable/ComfyUI/output/audio")
 
@@ -45,7 +46,8 @@ def run_text2music(prompt, negative_prompt, duration, workflow_path="workflows/a
     latest = max(files, key=lambda p: p.stat().st_mtime)
 
     dest = output_name if isinstance(output_name, Path) else Path(output_name)
-    shutil.copy(latest, dest)
+    reduce_audio_volume(latest, dest, volume=volumelevel)
+    # shutil.copy(latest, dest)
     print(f"✅ Saved output: {dest}")
     return dest
 

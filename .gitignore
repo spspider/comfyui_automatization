@@ -27,3 +27,4 @@ mediafiles/
 result_debug/
 models/
 *.ckpt
+**/*client_secrets.json
