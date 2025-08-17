@@ -150,12 +150,12 @@ def create_video_with_subtitles(video_path, audio_path, subtitle_path, output_pa
     final.write_videofile(output_path, codec='libx264', audio_codec='aac')
 
 def clean_text_captions(blocks):
-    """Clean text blocks from everything except letters, numbers, and punctuation."""
+    """Clean text blocks from everything except letters, numbers, punctuation, and Romanian diacritics."""
     import re
     
     for block in blocks:
-        # Keep only letters, numbers, spaces, and common punctuation
-        cleaned = re.sub(r'[^a-zA-Z0-9\s.,!?;:"\'-]', '', block['text'])
+        # Keep letters (including Romanian diacritics), numbers, spaces, and common punctuation
+        cleaned = re.sub(r'[^\w\s.,!?;:"\'-ăâîșțĂÂÎȘȚ]', '', block['text'], flags=re.UNICODE)
         # Remove extra whitespace
         block['text'] = re.sub(r'\s+', ' ', cleaned).strip()
     

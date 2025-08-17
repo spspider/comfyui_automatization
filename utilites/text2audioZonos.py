@@ -1,23 +1,22 @@
-import sys
+# # Удаляем старый импорт torchaudio, если он уже загружен
+# if "torchaudio" in sys.modules:
+#     del sys.modules["torchaudio"]
 
-# Удаляем старый импорт torchaudio, если он уже загружен
-if "torchaudio" in sys.modules:
-    del sys.modules["torchaudio"]
+# # Убираем путь к torchaudio из другого окружения
+# # sys.path = [p for p in sys.path if "comfyui_automatization" not in p]
 
-# Убираем путь к torchaudio из другого окружения
-# sys.path = [p for p in sys.path if "comfyui_automatization" not in p]
+# # Добавляем путь к нужному окружению
+# sys.path.insert(0, r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
+# import os
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Synchronous CUDA calls for better error reporting
 
-# Добавляем путь к нужному окружению
-sys.path.insert(0, r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
+
+
 import os
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Synchronous CUDA calls for better error reporting
-
 import torch
 import torchaudio
 import random
 import gc
-sys.path.append(r"C:\AI\Zonos-for-windows")
-from utilites.utilites import clear_vram
 from zonos.model import Zonos
 from zonos.conditioning import make_cond_dict
 from zonos.utils import DEFAULT_DEVICE as device
@@ -26,20 +25,20 @@ from zonos.utils import DEFAULT_DEVICE as device
 torch.cuda.empty_cache()
 gc.collect()
 print("🧽 CUDA VRAM cleared")
-clear_vram()
+
 def generate_audio_from_text(
     text,
     speaker_audio_path=None,
-    language="ro", #en-us
+    language="ro",
     output_path="sample.wav",
     cfg_scale=4.47,
     fmax=24000,
     pitch_std=113,
     speaking_rate=15.0,
-    seed=1829951755, #1637827792 - man, 1829951755 - woman
+    seed=1829951755,  # 1637827792 - man, 1829951755 - woman
     randomize_seed=False,
     emotions=[1.0, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2],
-    unconditional_keys=["emotion",  "pitch_std"]
+    unconditional_keys=["emotion", "pitch_std"]
 ):
     # Convert 'en' to 'en-us' if needed
     if language == "en":
@@ -103,11 +102,10 @@ def generate_audio_from_text(
     print("✅ Generation complete.")
     return seed
 
-
 if __name__ == "__main__":
     generate_audio_from_text(
         text="WOW!! This is a Zonos voice synthesis test with emotion and CFG scaling!.",
-        speaker_audio_path=None,  # or provide a path to an actual voice clone file
+        speaker_audio_path=None,
         language="en-us",
         output_path="output.wav",
         randomize_seed=False,
@@ -117,5 +115,5 @@ if __name__ == "__main__":
         speaking_rate=15.0,
         seed=1829951755,
         emotions=[1.0, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2],
-        unconditional_keys=["emotion",  "pitch_std"]
+        unconditional_keys=["emotion", "pitch_std"]
     )

@@ -14,7 +14,7 @@ from moviepy import concatenate_videoclips, VideoFileClip
 
 from utilites.text2audioZonos import generate_audio_from_text
 
-from utilites.text2audiof5 import run_f5_tts
+from utilites.text2audiof5 import run_f5_tts, run_speecht5_tts
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
@@ -34,8 +34,8 @@ from utilites.subtitles import create_full_subtitles_text, create_video_with_sub
 
 async def generate_story(provider="qwen"):
     prompt = (
-        "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, food challenges, DIY projects, dances, pet tricks, or transformations. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
-        "STYLE: style of Pixar 3D animation, Soft global illumination, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, Pixar-style character design\n"
+        "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, food challenges, DIY projects, dances, pet tricks, or transformations be various. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
+        "STYLE: style of Pixar 3D animation, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, Pixar-style character design\n"
         "Write a complete structured script for a 30-second video, divided into exactly 6 scenes of 5 seconds each.\n"
         "Start with a short title, a YouTube-ready description, and 1-3 relevant hashtags.\n"
         "IMPORTANT: Treat the story as one continuous narrative. For each scene, explicitly repeat and build upon context from previous scenes (e.g., if a character wears red in scene 1, describe them as 'the character in red' in later scenes; repeat locations, actions, and states). Repeat key descriptions in Visual and Sound to maintain continuity, as scenes will be processed separately.\n"
@@ -488,7 +488,7 @@ def list_files_in_result(pattern, result_dir=None):
     result_dir = Path(r"C:/AI/comfyui_automatization/"+result_dir)
     return sorted([file for file in result_dir.glob(pattern) if file.is_file()])    
 
-async def main():
+async def main_production():
     clean_comfy_output(COMFY_OUTPUT_DIR)  
     video_output_dir = Path("video_output")
     video_output_dir.mkdir(exist_ok=True)
@@ -518,19 +518,31 @@ async def main():
     for language in ["en", "ro", "ru"]:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
 
-    ################# ZONOS TTS #################
-    # for language in ["en", "ro", "ru"]:
-    #     for idx, blk in enumerate(blocks, 1):
-    #         generate_audio_from_text(blk["text"][language], output_path=f"result/scene_{idx:02d}_voice_{language}.wav", language=language)
-    ######################################################
-    ################# F5 TTS #################
-    for language in ["en", "ro", "ru"]:
-        for idx, blk in enumerate(blocks, 1):
-            run_f5_tts(
-                language=language,
-                gen_text=blk["text"][language],
-                output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-            )
+    ####################TTS for RU########################
+    language = "ru"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        run_f5_tts(
+            language=language,
+            gen_text=blk["text"][language],
+            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################TTS for EN########################
+    language = "en"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        generate_audio_from_text(
+            language=language,
+            text=blk["text"][language],
+            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################TTS for EN########################
+    language = "ro"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        generate_audio_from_text(
+            language=language,
+            text=blk["text"][language],
+            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################################END TTS#############       
 
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")
@@ -580,7 +592,7 @@ async def main():
 
     clear_vram()
     #############END#############
-async def main(): 
+async def main_test(): 
     meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
     print(f"Parsed {len(blocks)} scenes.")
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
@@ -604,6 +616,14 @@ async def main():
             text=blk["text"][language],
             output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
         )
+    ####################TTS for EN########################
+    language = "ro"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        run_speecht5_tts(
+            language=language,
+            gen_text=blk["text"][language],
+            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
     # output_path = run_f5_tts(
     #     language="ru",
     #     gen_text="Вау! вот это нормер!! я сияна паук+ова и это мой компьютерный голос, я хочу сделать видео с комментарием, как я играю в игру, и это будет очень интересно",
@@ -615,4 +635,5 @@ async def main():
 
     
 if __name__ == "__main__":
-    asyncio.run(main())    
+    while True:
+        asyncio.run(main_production())
