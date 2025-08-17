@@ -12,8 +12,9 @@ from pathlib import Path
 from datetime import datetime
 from moviepy import concatenate_videoclips, VideoFileClip
 
-from utilites.text2audioZonos import generate_audio_from_text
+# from utilites.text2audioZonos import generate_audio_from_text
 
+from utilites.text2audiof5 import run_f5_tts
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
@@ -472,7 +473,7 @@ def generate_combined_tts_audio(blocks, output_path):
     Joins all blocks' text into a single narration for entire video, preserving timing info.
     Returns the list of durations (seconds) for each block, and path to full audio.
     """
-    from utilites.text2audioZonos import generate_audio_from_text
+ 
 
     full_text = "\n".join([blk['text'] for blk in blocks])
     generate_audio_from_text(text=full_text, output_path=output_path)
@@ -517,10 +518,19 @@ async def main():
     for language in ["en", "ro", "ru"]:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
 
+    ################# ZONOS TTS #################
+    # for language in ["en", "ro", "ru"]:
+    #     for idx, blk in enumerate(blocks, 1):
+    #         generate_audio_from_text(blk["text"][language], output_path=f"result/scene_{idx:02d}_voice_{language}.wav", language=language)
+    ######################################################
+    ################# F5 TTS #################
     for language in ["en", "ro", "ru"]:
         for idx, blk in enumerate(blocks, 1):
-            generate_audio_from_text(blk["text"][language], output_path=f"result/scene_{idx:02d}_voice_{language}.wav", language=language)
-
+            run_f5_tts(
+                language=language,
+                gen_text=blk["text"][language],
+                output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+            )
 
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")
@@ -570,3 +580,28 @@ async def main():
 
     clear_vram()
     #############END#############
+async def main(): 
+    meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+    print(f"Parsed {len(blocks)} scenes.")
+    blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
+    blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
+    print("Starting main pipeline...")
+    for language in ["en", "ru"]:
+        for idx, blk in enumerate(blocks, 1):
+            run_f5_tts(
+                language=language,
+                gen_text=blk["text"][language],
+                output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+            )
+    # output_path = run_f5_tts(
+    #     language="ru",
+    #     gen_text="Вау! вот это нормер!! я сияна паук+ова и это мой компьютерный голос, я хочу сделать видео с комментарием, как я играю в игру, и это будет очень интересно",
+    #     output_file=r"C:\AI\comfyui_automatization\result\output_ru.wav",
+    #     ref_audio=r"C:\AI\comfyui_automatization\result_debug\russian_female_1.wav",  # Замени на русский референс
+    #     ref_text="Серьезно? Не, я не хочу. У меня вообще это... Ну, жутко интересно, Гент, я волосы закорю, конечно. Так, хорошо. А что можно делать этим станком?"
+    # )
+    # print(f"Generated audio saved to: {output_path}")
+
+    
+if __name__ == "__main__":
+    asyncio.run(main())    
