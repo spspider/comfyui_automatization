@@ -24,15 +24,19 @@ def get_authenticated_service():
     return build("youtube", "v3", credentials=creds)
 
 # Загрузка видео
-def upload_video(file, title, description, tags=None, categoryId="22", privacyStatus="public"):
+def upload_video(file, title, description, tags=None, categoryId="22", privacyStatus="public", language="en"):
     youtube = get_authenticated_service()
+    
+    print(f"Uploading video with title: '{title}' in language: {language}")
 
     body = {
         "snippet": {
             "title": title,
             "description": description,
             "tags": tags or [],
-            "categoryId": categoryId
+            "categoryId": categoryId,
+            "defaultLanguage": language,
+            "defaultAudioLanguage": language
         },
         "status": {
             "privacyStatus": privacyStatus

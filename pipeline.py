@@ -13,7 +13,7 @@ from datetime import datetime
 from moviepy import concatenate_videoclips, VideoFileClip
 
 from utilites.text2audioZonos import generate_audio_from_text
-
+from utilites.upload_youtube import upload_video
 from utilites.text2audiof5 import run_f5_tts, run_speecht5_tts
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
@@ -21,7 +21,8 @@ from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_n
 from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename, create_youtube_csv
 from workflow_run.video2audio_workflow import run_video2audio
 from workflow_run.wan_2_1_t2v_gguf_api import wan_2_1_t2v_gguf_api
-from utilites.argotranslate import translateTextBlocks
+from utilites.argotranslate import translateTextBlocks, translate_meta
+from utilites.upload_youtube import upload_video
 from workflow_run.text_to_music_ace_step import run_text2music
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
@@ -33,9 +34,25 @@ DEBUG = False
 from utilites.subtitles import create_full_subtitles_text, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
 async def generate_story(provider="qwen"):
+    import random
+    
+    # Define animation styles with consistent visual elements
+    styles = [
+        "Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting",
+        "Studio Ghibli anime style, hand-drawn animation, soft watercolor backgrounds, detailed nature elements, warm lighting, whimsical character design",
+        "Disney 2D animation style, vibrant colors, expressive character faces, dynamic poses, fairy tale atmosphere, magical lighting effects",
+        "Cartoon Network style, bold outlines, flat colors, exaggerated expressions, playful character design, bright saturated colors",
+        "Claymation stop-motion style, textured clay surfaces, handcrafted appearance, quirky character movements, tactile materials",
+        "Realistic CGI animation style, photorealistic textures, detailed lighting, cinematic camera angles, high-quality rendering",
+        "Minimalist flat design style, simple geometric shapes, clean lines, pastel color palette, modern aesthetic, vector-like appearance"
+    ]
+    
+    # Randomly select one style for the entire story
+    chosen_style = random.choice(styles)
+    
     prompt = (
         "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, DIY projects, food challenges, dances, pet tricks, or transformations be various. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
-        "STYLE: style of Pixar 3D animation, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, Pixar-style character design\n"
+        f"STYLE: {chosen_style}\n"
         "Write a complete structured script for a 30-second video, divided into exactly 6 scenes of 5 seconds each.\n"
         "Start with a short title, a YouTube-ready description, and 1-3 relevant hashtags.\n"
         "IMPORTANT: Treat the story as one continuous narrative. For each scene, explicitly repeat and build upon context from previous scenes (e.g., if a character wears red in scene 1, describe them as 'the character in red' in later scenes; repeat locations, actions, and states). Repeat key descriptions in Visual and Sound to maintain continuity, as scenes will be processed separately.\n"
@@ -52,7 +69,7 @@ async def generate_story(provider="qwen"):
         "**Title:** Short scene title.\n"
         "**Visual:** Detailed scene description, incorporating the characters block. Use at least 10 sentences covering background, foreground, actions, and visuals. Repeat context from prior scenes.\n"
         "**Sound:** Describe ambient sounds or effects, building on prior scenes. In the last scene, include a call-to-action sound if needed.\n"
-        "**Text:** On-screen caption and narrator text, you can enumerate ingredients, steps, or instructions (7-15 words, with emotions like 'Wow!' or exclamation marks) it can be more than 5 sec, feel free to put more text and storytelling elements.\n"
+        "**Text:** Narrator text like ingredients, steps, (10-15 words, with emotions like 'Wow!' or exclamation marks).\n"
         "---\n"
         "Repeat for each 5-second segment: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30].\n"
         "In the last scene's Text, include a subscribe call like 'Subscribe now!'.\n"
@@ -168,7 +185,7 @@ def generate_videos(blocks, meta, negative_prompt="low quality, distorted, stati
         timestamp = datetime.now().strftime("%H:%M")
         print(f"⌛ Waiting for completion... [{timestamp}]")
         positive_prompt = meta['characters'] + "\n" + blk['visual']
-        additional_style = "STYLE: style of Pixar 3D animation, Soft global illumination, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting, Pixar-style character design\n"
+        additional_style = ""
         clip = wan_2_1_t2v_gguf_api(additional_style + positive_prompt,  video_seconds=5) # override duration for testing purposes
 
         # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
@@ -201,11 +218,11 @@ def each_audio_scene(video_path, prompt, negative_prompt="low quality, noise, mu
         clear_vram()
         return newname
 
-def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise, music, speaking, chatting"):
+def add_audio_to_scenes(video_paths, blocks, negative_prompt="low quality, noise, music, speaking, chatting, lyrics, singing, human voice, vocals, words, talking"):
 
     audio_video_paths = []
     for idx, (video_path, blk) in enumerate(zip(video_paths, blocks), 1):
-        newname = each_audio_scene(video_path, "", negative_prompt, idx, newname=RESULT_DIR / f"scene_{idx:02d}_audio.mp4")
+        newname = each_audio_scene(video_path, blk['sound'], negative_prompt, idx, newname=RESULT_DIR / f"scene_{idx:02d}_audio.mp4")
         audio_video_paths.append(newname)
 
     return audio_video_paths
@@ -560,7 +577,7 @@ async def main_production():
                 audio_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
                 video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled_{language}.mp4",
                 output_path=RESULT_DIR / f"scene_{idx:02d}_merged_{language}.mp4",
-                original_audio_volume=0.6
+                original_audio_volume=0.3
             )
     for language in ["en", "ro", "ru"]:
         vids = list_files_in_result(f"scene_*_merged_{language}.mp4","result") 
@@ -579,9 +596,10 @@ async def main_production():
             blocks=blocks,
             audio_path=RESULT_DIR / "final_movie_music.mp4",
             video_path=RESULT_DIR / f"final_movie_{language}.mp4",
-            output_path=f"{output_path}.mp4"
+            output_path=f"{output_path}.mp4",
+            volume_level=0.2  # Adjust volume level as needed
         )
-        create_youtube_csv(meta, output_path)
+        # create_youtube_csv(meta, output_path)
     
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP [{timestamp}]")
@@ -593,11 +611,43 @@ async def main_production():
 
     #save meta
     # Save meta to video_output directory
-
-    meta_file = video_output_dir / f"{sanitize_filename(meta['video_title'])}.json"
-    with open(meta_file, "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, indent=2)
-
+    ################# translate meta #################
+    for language in ["en", "ro", "ru"]:
+        if language == "en":
+            translated_meta = meta
+        else:
+            translated_meta = translate_meta(meta, language)
+        meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump(translated_meta, f, ensure_ascii=False, indent=2)
+    ###### UPLOAD VIDEOS TO YOUTUBE ######
+    for language in ["en", "ro", "ru"]:
+        meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+        with open(meta_file, "r", encoding="utf-8") as f:
+            translated_meta = json.load(f)
+        
+        video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
+        upload_video(
+            file=str(video_file),
+            title=translated_meta["video_title"].join(" ").join(translated_meta["video_hashtags"].split(", ")),
+            description=translated_meta["video_description"],
+            tags=translated_meta["video_hashtags"].split(", "),
+            language=language,
+            privacyStatus="public"
+        )
+    ############### move uploaded videos to folder uploaded_videos ###############
+    uploaded_dir = Path("uploaded_videos")
+    uploaded_dir.mkdir(exist_ok=True)
+    
+    for language in ["en", "ro", "ru"]:
+        video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
+        json_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+        
+        if video_file.exists():
+            shutil.move(str(video_file), str(uploaded_dir / video_file.name))
+        if json_file.exists():
+            shutil.move(str(json_file), str(uploaded_dir / json_file.name))
+    
     clear_vram()
     #############END#############
 async def main_test(): 
@@ -605,33 +655,56 @@ async def main_test():
     print(f"Parsed {len(blocks)} scenes.")
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
     blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
-    print("Starting main pipeline...")
+    print("Starting test pipeline...")
 
-
+    ################# translate meta #################
+    for language in ["en", "ro", "ru"]:
+        if language == "en":
+            translated_meta = meta
+        else:
+            translated_meta = translate_meta(meta, language)
+        meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump(translated_meta, f, ensure_ascii=False, indent=2)
+    ###### UPLOAD VIDEOS TO YOUTUBE ######
+    for language in ["en", "ro", "ru"]:
+        meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+        with open(meta_file, "r", encoding="utf-8") as f:
+            translated_meta = json.load(f)
+        
+        video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
+        upload_video(
+            file=str(video_file),
+            title=translated_meta["video_title"].join(" ").join(translated_meta["video_hashtags"].split(", ")),
+            description=translated_meta["video_description"],
+            tags=translated_meta["video_hashtags"].split(", "),
+            language=language,
+            privacyStatus="private"
+        )
     ####################TTS for RU########################
-    language = "ru"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        run_f5_tts(
-            language=language,
-            gen_text=blk["text"][language],
-            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################TTS for EN########################
-    language = "en"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        generate_audio_from_text(
-            language=language,
-            text=blk["text"][language],
-            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################TTS for EN########################
-    language = "ro"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        run_speecht5_tts(
-            language=language,
-            gen_text=blk["text"][language],
-            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
+    # language = "ru"  # Change to "ru" or "ro" for other languages
+    # for idx, blk in enumerate(blocks, 1):
+    #     run_f5_tts(
+    #         language=language,
+    #         gen_text=blk["text"][language],
+    #         output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+    #     )
+    # ####################TTS for EN########################
+    # language = "en"  # Change to "ru" or "ro" for other languages
+    # for idx, blk in enumerate(blocks, 1):
+    #     generate_audio_from_text(
+    #         language=language,
+    #         text=blk["text"][language],
+    #         output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+    #     )
+    # ####################TTS for EN########################
+    # language = "ro"  # Change to "ru" or "ro" for other languages
+    # for idx, blk in enumerate(blocks, 1):
+    #     run_speecht5_tts(
+    #         language=language,
+    #         gen_text=blk["text"][language],
+    #         output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+    #     )
     # output_path = run_f5_tts(
     #     language="ru",
     #     gen_text="Вау! вот это нормер!! я сияна паук+ова и это мой компьютерный голос, я хочу сделать видео с комментарием, как я играю в игру, и это будет очень интересно",
@@ -642,6 +715,9 @@ async def main_test():
     # print(f"Generated audio saved to: {output_path}")
 
     
+# if __name__ == "__main__":
+
+#         asyncio.run(main_test())
 if __name__ == "__main__":
     while True:
         asyncio.run(main_production())

@@ -26,6 +26,16 @@ def translateTextBlocks(blocks, tolanguages=("ru", "ro")):
                 block["text"][lang] = translated_text
     return blocks
 
+def translate_meta(meta, target_language):
+    """Translate all string values in meta dictionary to target language."""
+    translated_meta = {}
+    for key, value in meta.items():
+        if isinstance(value, str):
+            translated_meta[key] = translate_text(value, "en", target_language)
+        else:
+            translated_meta[key] = value
+    return translated_meta
+
 
 if __name__ == "__main__":
     # Example usage
