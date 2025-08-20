@@ -29,3 +29,5 @@ models/
 *.ckpt
 **/*client_secrets.json
 **/*token.pickle
+uploaded_videos/
+result copy/

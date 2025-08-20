@@ -112,22 +112,34 @@ def create_full_subtitles(blocks):
     return full_srt_path
 def create_full_subtitles_text(blocks, lang="en"):
     """
-    Creates full subtitles txt file from blocks, saving only text content for YouTube subtitles.
+    Creates full subtitles SRT file from blocks with proper timecodes for YouTube.
     """
-    full_text = []
-    for block in blocks:
+    srt_content = []
+    current_time = 0.0
+    
+    for idx, block in enumerate(blocks, 1):
         # Handle both string and dictionary text formats
         if isinstance(block["text"], dict):
             subtitle_text = block["text"][lang].strip().replace('\n', ' ')
         else:
             subtitle_text = block["text"].strip().replace('\n', ' ')
-        full_text.append(subtitle_text)
+        
+        start_time = current_time
+        end_time = current_time + block.get("duration", 5.0)  # Default 5 seconds if no duration
+        
+        # Add SRT entry
+        srt_content.append(f"{idx}")
+        srt_content.append(f"{format_time(start_time)} --> {format_time(end_time)}")
+        srt_content.append(subtitle_text)
+        srt_content.append("")  # Empty line between entries
+        
+        current_time = end_time
 
-    full_txt_path = RESULT_DIR / f"full_subtitles_{lang}.txt"
-    with open(full_txt_path, "w", encoding="utf-8") as f:
-        f.write(" ".join(full_text))
-    print(f"📝 Полные субтитры сохранены в: {full_txt_path}")
-    return full_txt_path
+    full_srt_path = RESULT_DIR / f"full_subtitles_{lang}.srt"
+    with open(full_srt_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(srt_content))
+    print(f"📝 Full SRT subtitles saved to: {full_srt_path}")
+    return full_srt_path
 def create_video_with_subtitles(video_path, audio_path, subtitle_path, output_path):
     video = VideoFileClip(video_path)
     audio = AudioFileClip(audio_path)
@@ -150,12 +162,24 @@ def create_video_with_subtitles(video_path, audio_path, subtitle_path, output_pa
     final.write_videofile(output_path, codec='libx264', audio_codec='aac')
 
 def clean_text_captions(blocks):
-    """Clean text blocks from everything except letters, numbers, punctuation, and Romanian diacritics."""
+    """Clean text blocks to keep only English characters and basic punctuation."""
     import re
     
     for block in blocks:
-        # Keep letters (including Romanian diacritics), numbers, spaces, and common punctuation
-        cleaned = re.sub(r'[^\w\s.,!?;:"\'-ăâîșțĂÂÎȘȚ]', '', block['text'], flags=re.UNICODE)
+        text = block['text']
+        
+        # Replace accented characters with basic equivalents
+        text = re.sub(r'[áàäâ]', 'a', text)
+        text = re.sub(r'[éèëê]', 'e', text)
+        text = re.sub(r'[íìïî]', 'i', text)
+        text = re.sub(r'[óòöô]', 'o', text)
+        text = re.sub(r'[úùüû]', 'u', text)
+        text = re.sub(r'[ñ]', 'n', text)
+        text = re.sub(r'[ç]', 'c', text)
+        
+        # Keep only English letters, numbers, spaces, and basic punctuation
+        cleaned = re.sub(r'[^a-zA-Z0-9\s.,!?;:]', '', text)
+        
         # Remove extra whitespace
         block['text'] = re.sub(r'\s+', ' ', cleaned).strip()
     

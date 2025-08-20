@@ -33,8 +33,12 @@ DEBUG = False
 
 from utilites.subtitles import create_full_subtitles_text, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
+# Global variable to store chosen style
+CHOSEN_STYLE = None
+
 async def generate_story(provider="qwen"):
     import random
+    global CHOSEN_STYLE
     
     # Define animation styles with consistent visual elements
     styles = [
@@ -49,6 +53,7 @@ async def generate_story(provider="qwen"):
     
     # Randomly select one style for the entire story
     chosen_style = random.choice(styles)
+    CHOSEN_STYLE = chosen_style
     
     prompt = (
         "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, DIY projects, food challenges, dances, pet tricks, or transformations be various. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
@@ -69,7 +74,7 @@ async def generate_story(provider="qwen"):
         "**Title:** Short scene title.\n"
         "**Visual:** Detailed scene description, incorporating the characters block. Use at least 10 sentences covering background, foreground, actions, and visuals. Repeat context from prior scenes.\n"
         "**Sound:** Describe ambient sounds or effects, building on prior scenes. In the last scene, include a call-to-action sound if needed.\n"
-        "**Text:** Narrator text like ingredients, steps, (10-15 words, with emotions like 'Wow!' or exclamation marks).\n"
+        "**Text:** Narrator text like ingredients, steps, (10-15 words, with emotions like 'Wow!' or exclamation marks) but avoid any another special characters.\n"
         "---\n"
         "Repeat for each 5-second segment: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30].\n"
         "In the last scene's Text, include a subscribe call like 'Subscribe now!'.\n"
@@ -77,12 +82,26 @@ async def generate_story(provider="qwen"):
     )
     return await generate_response_allmy(provider, prompt)
 
+def extract_style_from_story(story_text):
+    """Extract the STYLE from story text if present"""
+    style_match = re.search(r'STYLE:\s*(.*?)(?=\n|$)', story_text)
+    if style_match:
+        return style_match.group(1).strip()
+    return None
+
 def parse_story_blocks(story_text):
     """
     Parse story text into metadata and scenes, handling optional scene-specific characters field.
     """
     story_text = re.sub(r'<think>.*?</think>', '', story_text, flags=re.DOTALL).strip()
     print(f"Parsed story text: {story_text[:100]}...")  # Debugging output, show first 100 chars
+    
+    # Extract style from story text
+    extracted_style = extract_style_from_story(story_text)
+    if extracted_style:
+        global CHOSEN_STYLE
+        CHOSEN_STYLE = extracted_style
+    
     meta = {}
     # Parse metadata
     meta_match = re.search(
@@ -100,7 +119,8 @@ def parse_story_blocks(story_text):
             "video_description": meta_match.group(2).strip(),
             "video_hashtags": meta_match.group(3).strip().lower(),
             "overall_music": meta_match.group(4).strip(),
-            "characters": meta_match.group(5).strip()
+            "characters": meta_match.group(5).strip(),
+            "chosen_style": CHOSEN_STYLE or "Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting"
         }
 
     # Updated regex to make characters field optional
@@ -185,8 +205,8 @@ def generate_videos(blocks, meta, negative_prompt="low quality, distorted, stati
         timestamp = datetime.now().strftime("%H:%M")
         print(f"⌛ Waiting for completion... [{timestamp}]")
         positive_prompt = meta['characters'] + "\n" + blk['visual']
-        additional_style = ""
-        clip = wan_2_1_t2v_gguf_api(additional_style + positive_prompt,  video_seconds=5) # override duration for testing purposes
+        additional_style = f"STYLE: {meta.get('chosen_style', 'Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting')}\n"
+        clip = wan_2_1_t2v_gguf_api(additional_style +" PROMPT:"+ positive_prompt,  video_seconds=5) # override duration for testing purposes
 
         # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
         # clip = run_text2video(blk['visual'])
@@ -345,7 +365,7 @@ def burn_tts_to_video(video_paths, blocks):
     return updated_videos
 
 
-def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None, original_audio_volume=1.0):
+def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None, original_audio_volume=1.0, voice_volume=3.0):
     """
     Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
     If the video is shorter than the audio, loop the necessary part from the end of the video to match the audio duration.
@@ -464,7 +484,7 @@ def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=
             "-i", str(video_path),
             "-i", str(audio_path),
             "-filter_complex",
-            f"[0:a]volume={original_audio_volume}[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
+            f"[0:a]volume={original_audio_volume}[a0]; [1:a]volume={voice_volume}[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
             "-map", "0:v", "-map", "[aout]",
             "-c:v", "copy", "-c:a", "aac",
             "-shortest", str(output_path)
@@ -577,7 +597,8 @@ async def main_production():
                 audio_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
                 video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled_{language}.mp4",
                 output_path=RESULT_DIR / f"scene_{idx:02d}_merged_{language}.mp4",
-                original_audio_volume=0.3
+                original_audio_volume=0.3,
+                voice_volume=3.0
             )
     for language in ["en", "ro", "ru"]:
         vids = list_files_in_result(f"scene_*_merged_{language}.mp4","result") 
@@ -597,7 +618,8 @@ async def main_production():
             audio_path=RESULT_DIR / "final_movie_music.mp4",
             video_path=RESULT_DIR / f"final_movie_{language}.mp4",
             output_path=f"{output_path}.mp4",
-            volume_level=0.2  # Adjust volume level as needed
+            original_audio_volume=0.2,  # Adjust volume level as needed,
+            voice_volume=1.0
         )
         # create_youtube_csv(meta, output_path)
     
@@ -621,32 +643,32 @@ async def main_production():
         with open(meta_file, "w", encoding="utf-8") as f:
             json.dump(translated_meta, f, ensure_ascii=False, indent=2)
     ###### UPLOAD VIDEOS TO YOUTUBE ######
-    for language in ["en", "ro", "ru"]:
-        meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
-        with open(meta_file, "r", encoding="utf-8") as f:
-            translated_meta = json.load(f)
+    # for language in ["en", "ro", "ru"]:
+    #     meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+    #     with open(meta_file, "r", encoding="utf-8") as f:
+    #         translated_meta = json.load(f)
         
-        video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
-        upload_video(
-            file=str(video_file),
-            title=translated_meta["video_title"].join(" ").join(translated_meta["video_hashtags"].split(", ")),
-            description=translated_meta["video_description"],
-            tags=translated_meta["video_hashtags"].split(", "),
-            language=language,
-            privacyStatus="public"
-        )
-    ############### move uploaded videos to folder uploaded_videos ###############
-    uploaded_dir = Path("uploaded_videos")
-    uploaded_dir.mkdir(exist_ok=True)
+    #     video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
+    #     upload_video(
+    #         file=str(video_file),
+    #         title=translated_meta["video_title"],
+    #         description=translated_meta["video_description"],
+    #         tags=translated_meta["video_hashtags"].split(", "),
+    #         language=language,
+    #         privacyStatus="public"
+    #     )
+    # ############### move uploaded videos to folder uploaded_videos ###############
+    # uploaded_dir = Path("uploaded_videos")
+    # uploaded_dir.mkdir(exist_ok=True)
     
-    for language in ["en", "ro", "ru"]:
-        video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
-        json_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
+    # for language in ["en", "ro", "ru"]:
+    #     video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
+    #     json_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
         
-        if video_file.exists():
-            shutil.move(str(video_file), str(uploaded_dir / video_file.name))
-        if json_file.exists():
-            shutil.move(str(json_file), str(uploaded_dir / json_file.name))
+    #     if video_file.exists():
+    #         shutil.move(str(video_file), str(uploaded_dir / video_file.name))
+    #     if json_file.exists():
+    #         shutil.move(str(json_file), str(uploaded_dir / json_file.name))
     
     clear_vram()
     #############END#############
@@ -656,7 +678,79 @@ async def main_test():
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
     blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
     print("Starting test pipeline...")
+###### DO NOT DELETE BLOCK ABOVE ######
 
+    ####################TTS for RU########################
+    language = "ru"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        run_f5_tts(
+            language=language,
+            gen_text=blk["text"][language],
+            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################TTS for EN########################
+    language = "en"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        generate_audio_from_text(
+            language=language,
+            text=blk["text"][language],
+            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################TTS for EN########################
+    language = "ro"  # Change to "ru" or "ro" for other languages
+    for idx, blk in enumerate(blocks, 1):
+        generate_audio_from_text(
+            language=language,
+            text=blk["text"][language],
+            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+        )
+    ####################################END TTS#############       
+
+    timestamp = datetime.now().strftime('%H:%M')
+    print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")
+    for language in ["en", "ro", "ru"]:
+        for idx, blk in enumerate(blocks, 1):
+            merge_audio_and_video(
+                blocks=blocks,
+                audio_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+                video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled_{language}.mp4",
+                output_path=RESULT_DIR / f"scene_{idx:02d}_merged_{language}.mp4",
+                original_audio_volume=0.3,
+                voice_volume=3.0
+            )
+    for language in ["en", "ro", "ru"]:
+        vids = list_files_in_result(f"scene_*_merged_{language}.mp4","result") 
+        video = combine_videos(vids, f"final_movie_{language}", output_path=Path("result/"))
+    timestamp = datetime.now().strftime('%H:%M')
+    print(f"⌛ TIMESTAMP each_audio_scene [{timestamp}]")
+    ####generate music
+    generated_music = run_text2music(prompt=meta["overall_music"], 
+                                     negative_prompt="low quality, noise, static, blurred details, subtitles, paintings, pictures, lyrics, text", 
+                                     duration=VideoFileClip(str(RESULT_DIR/"final_movie_en.mp4")).duration,
+                                     output_name=RESULT_DIR / "final_movie_music.mp4")
+    
+    for language in ["en", "ro", "ru"]:
+        output_path=f"video_output/{sanitize_filename(meta['video_title'])}_{language}"
+        merge_audio_and_video(
+            blocks=blocks,
+            audio_path=RESULT_DIR / "final_movie_music.mp4",
+            video_path=RESULT_DIR / f"final_movie_{language}.mp4",
+            output_path=f"{output_path}.mp4",
+            original_audio_volume=0.2,  # Adjust volume level as needed,
+            voice_volume=1.0
+        )
+        # create_youtube_csv(meta, output_path)
+    
+    timestamp = datetime.now().strftime('%H:%M')
+    print(f"⌛ TIMESTAMP [{timestamp}]")
+    for language in ["en", "ro", "ru"]:
+        subtitle_file = create_full_subtitles_text(blocks, language)
+        subtitle_output = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.srt"
+        shutil.copy(subtitle_file, subtitle_output)
+        print(f"📝 Subtitle file saved to: {subtitle_output}")
+
+    #save meta
+    # Save meta to video_output directory
     ################# translate meta #################
     for language in ["en", "ro", "ru"]:
         if language == "en":
@@ -666,58 +760,10 @@ async def main_test():
         meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
         with open(meta_file, "w", encoding="utf-8") as f:
             json.dump(translated_meta, f, ensure_ascii=False, indent=2)
-    ###### UPLOAD VIDEOS TO YOUTUBE ######
-    for language in ["en", "ro", "ru"]:
-        meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
-        with open(meta_file, "r", encoding="utf-8") as f:
-            translated_meta = json.load(f)
-        
-        video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
-        upload_video(
-            file=str(video_file),
-            title=translated_meta["video_title"].join(" ").join(translated_meta["video_hashtags"].split(", ")),
-            description=translated_meta["video_description"],
-            tags=translated_meta["video_hashtags"].split(", "),
-            language=language,
-            privacyStatus="private"
-        )
-    ####################TTS for RU########################
-    # language = "ru"  # Change to "ru" or "ro" for other languages
-    # for idx, blk in enumerate(blocks, 1):
-    #     run_f5_tts(
-    #         language=language,
-    #         gen_text=blk["text"][language],
-    #         output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-    #     )
-    # ####################TTS for EN########################
-    # language = "en"  # Change to "ru" or "ro" for other languages
-    # for idx, blk in enumerate(blocks, 1):
-    #     generate_audio_from_text(
-    #         language=language,
-    #         text=blk["text"][language],
-    #         output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-    #     )
-    # ####################TTS for EN########################
-    # language = "ro"  # Change to "ru" or "ro" for other languages
-    # for idx, blk in enumerate(blocks, 1):
-    #     run_speecht5_tts(
-    #         language=language,
-    #         gen_text=blk["text"][language],
-    #         output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-    #     )
-    # output_path = run_f5_tts(
-    #     language="ru",
-    #     gen_text="Вау! вот это нормер!! я сияна паук+ова и это мой компьютерный голос, я хочу сделать видео с комментарием, как я играю в игру, и это будет очень интересно",
-    #     output_file=r"C:\AI\comfyui_automatization\result\output_ru.wav",
-    #     ref_audio=r"C:\AI\comfyui_automatization\result_debug\russian_female_1.wav",  # Замени на русский референс
-    #     ref_text="Серьезно? Не, я не хочу. У меня вообще это... Ну, жутко интересно, Гент, я волосы закорю, конечно. Так, хорошо. А что можно делать этим станком?"
-    # )
-    # print(f"Generated audio saved to: {output_path}")
 
     
-# if __name__ == "__main__":
-
-#         asyncio.run(main_test())
+##if __name__ == "__main__":
+ #    asyncio.run(main_test())
 if __name__ == "__main__":
-    while True:
-        asyncio.run(main_production())
+     while True:
+         asyncio.run(main_production())
