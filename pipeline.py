@@ -37,7 +37,6 @@ from utilites.subtitles import create_full_subtitles_text, create_video_with_sub
 CHOSEN_STYLE = None
 
 async def generate_story(provider="qwen"):
-    import random
     global CHOSEN_STYLE
     
     # Define animation styles with consistent visual elements
@@ -46,39 +45,76 @@ async def generate_story(provider="qwen"):
         "Studio Ghibli anime style, hand-drawn animation, soft watercolor backgrounds, detailed nature elements, warm lighting, whimsical character design",
         "Disney 2D animation style, vibrant colors, expressive character faces, dynamic poses, fairy tale atmosphere, magical lighting effects",
         "Cartoon Network style, bold outlines, flat colors, exaggerated expressions, playful character design, bright saturated colors",
-        "Claymation stop-motion style, textured clay surfaces, handcrafted appearance, quirky character movements, tactile materials",
         "Realistic CGI animation style, photorealistic textures, detailed lighting, cinematic camera angles, high-quality rendering",
-        "Minimalist flat design style, simple geometric shapes, clean lines, pastel color palette, modern aesthetic, vector-like appearance"
+        "Anime manga style, cel-shaded animation, dramatic lighting, expressive eyes, dynamic action poses, vibrant colors",
+        "Watercolor painting style, soft brush strokes, flowing colors, artistic texture, dreamy atmosphere, hand-painted look",
+        "Retro 80s synthwave style, neon colors, geometric patterns, cyberpunk aesthetic, glowing effects, nostalgic vibes",
+        "Paper cutout animation style, layered paper textures, shadow effects, handcrafted appearance, stop-motion feel",
+        "Oil painting style, rich textures, classical art technique, warm color palette, Renaissance-inspired lighting",
+        "Comic book style, bold outlines, halftone patterns, speech bubbles, dynamic panels, superhero aesthetic",
+        "Isometric 3D style, geometric precision, clean angles, modern design, architectural visualization, technical illustration",
+        "Holographic projection style, translucent surfaces, rainbow light refractions, floating digital elements, futuristic transparency effects",
+        "Quantum particle visualization style, energy fields, glowing orbs, particle trails, scientific visualization, molecular structures",
+        "Fractal geometry style, infinite recursive patterns, mathematical precision, kaleidoscopic effects, sacred geometry, hypnotic spirals",
+        "Neural network visualization style, interconnected nodes, synaptic connections, brain-like patterns, electric impulses, AI consciousness",
+        "Dimensional portal style, reality tears, space-time distortions, interdimensional rifts, cosmic gateways, parallel universe glimpses",
+        "Metamorphic reality style, constantly shifting forms, reality glitches, impossible geometries, Escher-like paradoxes, dream logic"
     ]
     
-    # Randomly select one style for the entire story
-    chosen_style = random.choice(styles)
+    # Load status and select next style sequentially
+    status_file = Path("status.json")
+    if status_file.exists():
+        with open(status_file, "r") as f:
+            status = json.load(f)
+        current_style_index = status.get("current_style_index", 0)
+    else:
+        current_style_index = 0
+    
+    # Select current style and update index
+    chosen_style = styles[current_style_index]
+    next_index = (current_style_index + 1) % len(styles)
+    
+    # Save updated status
+    status = {"current_style_index": next_index}
+    with open(status_file, "w") as f:
+        json.dump(status, f, indent=2)
+    
     CHOSEN_STYLE = chosen_style
+    print(f"🎨 Using style {current_style_index + 1}/{len(styles)}: {chosen_style[:50]}...")
     
     prompt = (
-        "You are a viral YouTube Shorts creator using AI to make engaging 30-second videos. Generate a cohesive, continuous story based on popular themes like mini vlogs, DIY projects, food challenges, dances, pet tricks, or transformations be various. Avoid specific niche trends; focus on relatable, timeless ideas that are visually appealing and easy to follow.\n"
+        "You are a viral YouTube Shorts creator. Based on trending analysis, create VIRAL content focusing on these HIGH-PERFORMING themes:\n"
+        "🔥 TOP VIRAL THEMES (prioritize these):\n"
+        "- DIY transformations (wall makeovers, room upgrades, crafts)\n"
+        "- Pet content (dogs baking, cats cooking, pet tricks, pet challenges)\n"
+        "- Coffee/food magic (coffee art, cooking fails, food transformations)\n"
+        "- Quick tutorials (5-minute fixes, 30-second hacks, instant results)\n"
+        "- Satisfying content (slime making, glitter transformations, ASMR crafts)\n"
+        "- Cute chaos (pets helping with tasks, cooking disasters turned wins)\n\n"
+        "📈 VIRAL FORMULA: Use these proven elements:\n"
+        "- Start with hook: 'Watch me transform...', 'This dog does WHAT?', 'DIY hack that went viral!'\n"
+        "- Include pets as helpers/characters (dogs, cats, fluffy animals)\n"
+        "- Show clear before/after transformations\n"
+        "- Use satisfying visual elements (mixing, pouring, revealing)\n"
+        "- End with surprising twist or amazing result\n\n"
         f"STYLE: {chosen_style}\n"
-        "Write a complete structured script for a 30-second video, divided into exactly 6 scenes of 5 seconds each.\n"
-        "Start with a short title, a YouTube-ready description, and 1-3 relevant hashtags.\n"
-        "IMPORTANT: Treat the story as one continuous narrative. For each scene, explicitly repeat and build upon context from previous scenes (e.g., if a character wears red in scene 1, describe them as 'the character in red' in later scenes; repeat locations, actions, and states). Repeat key descriptions in Visual and Sound to maintain continuity, as scenes will be processed separately.\n"
-        "REPEAT AND BUILD ON PREVIOUS CONTEXT IN EVERY SCENE DESCRIPTION.\n"
-        "Respond using this EXACT format only:\n"
+        "Create a 30-second video script with exactly 6 scenes (5 seconds each).\n"
+        "IMPORTANT: Maintain visual continuity - repeat character descriptions and settings in each scene.\n"
         "\n"
-        "**VIDEO_Title:** Short, catchy video title.\n"
-        "**VIDEO_Description:** Brief description for YouTube, 1-2 sentences.\n"
-        "**VIDEO_Hashtags:** 1-3 hashtags, separated by commas.\n"
-        "**Overall_Music:** Description of background music fitting the entire video, no lyrics, no words, (e.g., upbeat pop track).\n"
-        "**characters:** Detailed visual descriptions of all main characters (use names to separate, e.g., 'Alice: young woman with long blonde hair, wearing casual jeans; Bob: fluffy white dog'). This will be referenced in every scene.\n"
+        "**VIDEO_Title:** Viral-style title (use: 'DIY', 'This Dog', 'Watch Me', '30 Seconds', 'Viral', 'Magic')\n"
+        "**VIDEO_Description:** YouTube description with hook and call-to-action.\n"
+        "**VIDEO_Hashtags:** #diy, #viral, #pets, #transformation, #satisfying (choose 3-5 trending ones)\n"
+        "**Overall_Music:** Upbeat, energetic background music description (no lyrics).\n"
+        "**characters:** Detailed character descriptions (include pets, use names).\n"
         "\n"
         "**[00:00-00:05]**\n"
-        "**Title:** Short scene title.\n"
-        "**Visual:** Detailed scene description, incorporating the characters block. Use at least 10 sentences covering background, foreground, actions, and visuals. Repeat context from prior scenes.\n"
-        "**Sound:** Describe ambient sounds or effects, building on prior scenes. In the last scene, include a call-to-action sound if needed.\n"
-        "**Text:** Narrator text like ingredients, steps, (10-15 words, with emotions like 'Wow!' or exclamation marks) but avoid any another special characters.\n"
+        "**Title:** Scene title\n"
+        "**Visual:** Detailed scene (10+ sentences, repeat character details from previous scenes)\n"
+        "**Sound:** Ambient sounds/effects\n"
+        "**Text:** Engaging narrator text (10-15 words with excitement: 'Wow!', 'Amazing!')\n"
         "---\n"
-        "Repeat for each 5-second segment: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30].\n"
-        "In the last scene's Text, include a subscribe call like 'Subscribe now!'.\n"
-        "Ensure timestamps are exact and total 30 seconds. Do not add any extra text, explanations, or variations outside this format.\n"
+        "Continue for: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30]\n"
+        "Final scene text must include: 'Subscribe for more!'\n"
     )
     return await generate_response_allmy(provider, prompt)
 
@@ -598,7 +634,7 @@ async def main_production():
                 video_path=RESULT_DIR / f"scene_{idx:02d}_audio_subtitled_{language}.mp4",
                 output_path=RESULT_DIR / f"scene_{idx:02d}_merged_{language}.mp4",
                 original_audio_volume=0.3,
-                voice_volume=3.0
+                voice_volume=4.0
             )
     for language in ["en", "ro", "ru"]:
         vids = list_files_in_result(f"scene_*_merged_{language}.mp4","result") 
