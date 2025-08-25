@@ -100,6 +100,7 @@ async def generate_story(provider="qwen"):
         f"STYLE: {chosen_style}\n"
         "Create a 30-second video script with exactly 6 scenes (5 seconds each).\n"
         "IMPORTANT: Maintain visual continuity - repeat character descriptions and settings in each scene.\n"
+        "Include in scenario hidden jokes, like dog in a fire and dog looks confused, or what is USB? that is USA but after some changes. Do not use same joke, think hard to make new\n"
         "\n"
         "**VIDEO_Title:** Viral-style title (use: 'DIY', 'This Dog', 'Watch Me', '30 Seconds', 'Viral', 'Magic')\n"
         "**VIDEO_Description:** YouTube description with hook and call-to-action.\n"
@@ -114,7 +115,7 @@ async def generate_story(provider="qwen"):
         "**Text:** Engaging narrator text (10-15 words with excitement: 'Wow!', 'Amazing!')\n"
         "---\n"
         "Continue for: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30]\n"
-        "Final scene text must include: 'Subscribe for more!'\n"
+        "Final scene text must include: 'Subscribe!'\n"
     )
     return await generate_response_allmy(provider, prompt)
 
