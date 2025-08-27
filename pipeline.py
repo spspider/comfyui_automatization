@@ -112,7 +112,7 @@ async def generate_story(provider="qwen"):
         "**Title:** Scene title\n"
         "**Visual:** Detailed scene describe front view and back view, include detalization of all components in a scene be very specific (10+ sentences, repeat character details from previous scenes)\n"
         "**Sound:** Ambient sounds/effects\n"
-        "**Text:** Engaging narrator text, use 1-3 sentences (with excitement: 'Wow!', 'Amazing!')\n"
+        "**Text:** Engaging narrator text, use 1-3 sentences, dont use styles\n"
         "---\n"
         "Continue for: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30]\n"
         "Final scene text must include: 'Subscribe!'\n"
@@ -589,6 +589,7 @@ async def main_production():
     vids = list_files_in_result("scene_*_video.*","result") 
     blocks = update_blocks_with_real_duration(blocks)  # 1. обновляем длительность сцен
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
+    clear_vram()
     vids = add_audio_to_scenes(vids, blocks)  # 2. накладываем аудио только звуки scene_{idx:02d}_audio.mp4"
     
     vids = list_files_in_result("scene_*_audio.mp4","result") 
@@ -598,7 +599,7 @@ async def main_production():
     original_vids = vids.copy()  # Keep original video list
     for language in ["en", "ro", "ru"]:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
-
+    clear_vram()
     ####################TTS for RU########################
     language = "ru"  # Change to "ru" or "ro" for other languages
     for idx, blk in enumerate(blocks, 1):
@@ -624,7 +625,7 @@ async def main_production():
             output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
         )
     ####################################END TTS#############       
-
+    clear_vram()
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")
     for language in ["en", "ro", "ru"]:
@@ -643,6 +644,7 @@ async def main_production():
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP each_audio_scene [{timestamp}]")
     ####generate music
+    clear_vram()
     generated_music = run_text2music(prompt=meta["overall_music"], 
                                      negative_prompt="low quality, noise, static, blurred details, subtitles, paintings, pictures, lyrics, text", 
                                      duration=VideoFileClip(str(RESULT_DIR/"final_movie_en.mp4")).duration,
