@@ -1,7 +1,7 @@
 {
   "14": {
     "inputs": {
-      "tags": "anime, soft female vocals, kawaii pop, j-pop, childish, piano, guitar, synthesizer, fast, happy, cheerful, lighthearted\t\n",
+      "tags": "instrumental music, piano, guitar, synthesizer, melodic, harmonious, musical composition, background music",
       "lyrics": "",
       "lyrics_strength": 0.1,
       "clip": [
@@ -16,7 +16,7 @@
   },
   "17": {
     "inputs": {
-      "seconds": 120,
+      "seconds": 30,
       "batch_size": 1
     },
     "class_type": "EmptyAceStepLatentAudio",
@@ -51,14 +51,17 @@
   },
   "44": {
     "inputs": {
-      "conditioning": [
-        "14",
-        0
+      "tags": "noise, static, glitch, distortion, harsh sounds, electronic noise, digital artifacts, programmatic sounds, beeping, buzzing",
+      "lyrics": "",
+      "lyrics_strength": 0.1,
+      "clip": [
+        "40",
+        1
       ]
     },
-    "class_type": "ConditioningZeroOut",
+    "class_type": "TextEncodeAceStepAudio",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Negative Conditioning"
     }
   },
   "49": {
@@ -79,7 +82,7 @@
   },
   "50": {
     "inputs": {
-      "multiplier": 1.0000000000000002
+      "multiplier": 0.8
     },
     "class_type": "LatentOperationTonemapReinhard",
     "_meta": {
@@ -88,7 +91,7 @@
   },
   "51": {
     "inputs": {
-      "shift": 5.000000000000001,
+      "shift": 3.0,
       "model": [
         "40",
         0
@@ -102,8 +105,8 @@
   "52": {
     "inputs": {
       "seed": 767274607870604,
-      "steps": 50,
-      "cfg": 5,
+      "steps": 30,
+      "cfg": 7.5,
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 1,

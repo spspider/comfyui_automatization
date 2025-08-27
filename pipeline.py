@@ -100,7 +100,7 @@ async def generate_story(provider="qwen"):
         f"STYLE: {chosen_style}\n"
         "Create a 30-second video script with exactly 6 scenes (5 seconds each).\n"
         "IMPORTANT: Maintain visual continuity - repeat character descriptions and settings in each scene.\n"
-        "Include in scenario hidden jokes, like dog in a fire and dog looks confused, or what is USB? that is USA but after some changes. Do not use same joke, think hard to make new\n"
+        "Include subtle visual comedy and wordplay throughout the scenario. Create original humor through: unexpected character reactions, clever visual puns, amusing misunderstandings, or witty dialogue. Avoid repeating common jokes - be creative and original with each new scenario.\n"
         "\n"
         "**VIDEO_Title:** Viral-style title (use: 'DIY', 'This Dog', 'Watch Me', '30 Seconds', 'Viral', 'Magic')\n"
         "**VIDEO_Description:** YouTube description with hook and call-to-action.\n"
@@ -110,9 +110,9 @@ async def generate_story(provider="qwen"):
         "\n"
         "**[00:00-00:05]**\n"
         "**Title:** Scene title\n"
-        "**Visual:** Detailed scene (10+ sentences, repeat character details from previous scenes)\n"
+        "**Visual:** Detailed scene describe front view and back view, include detalization of all components in a scene be very specific (10+ sentences, repeat character details from previous scenes)\n"
         "**Sound:** Ambient sounds/effects\n"
-        "**Text:** Engaging narrator text (10-15 words with excitement: 'Wow!', 'Amazing!')\n"
+        "**Text:** Engaging narrator text, use 1-3 sentences (with excitement: 'Wow!', 'Amazing!')\n"
         "---\n"
         "Continue for: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30]\n"
         "Final scene text must include: 'Subscribe!'\n"
@@ -167,7 +167,7 @@ def parse_story_blocks(story_text):
         r'(?:\*\*characters:\*\*\s*(.*?)\s*\n)?'  # Optional characters field
         r'\*\*Visual:\*\*\s*(.*?)\s*\n'
         r'\*\*Sound:\*\*\s*(.*?)\s*\n'
-        r'\*\*Text:\*\*\s*(.*?)\s*(?=\n\*\*\[\d{2}:\d{2}-\d{2}:\d{2}\]\*\*|\n\*\*[^\[]+|\Z)',
+        r'\*\*Text:\*\*\s*(.*?)\s*\n',
         re.DOTALL
     )
 
@@ -716,7 +716,7 @@ async def main_test():
     blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
     print("Starting test pipeline...")
 ###### DO NOT DELETE BLOCK ABOVE ######
-
+    return
     ####################TTS for RU########################
     language = "ru"  # Change to "ru" or "ro" for other languages
     for idx, blk in enumerate(blocks, 1):
@@ -799,8 +799,8 @@ async def main_test():
             json.dump(translated_meta, f, ensure_ascii=False, indent=2)
 
     
-##if __name__ == "__main__":
- #    asyncio.run(main_test())
+#if __name__ == "__main__":
+#    asyncio.run(main_test())
 if __name__ == "__main__":
      while True:
          asyncio.run(main_production())
