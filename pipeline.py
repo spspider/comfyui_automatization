@@ -130,7 +130,11 @@ def parse_story_blocks(story_text):
     """
     Parse story text into metadata and scenes, handling optional scene-specific characters field.
     """
-    story_text = re.sub(r'<think>.*?</think>', '', story_text, flags=re.DOTALL).strip()
+    # Clean unwanted content
+    story_text = re.sub(r'<think>.*?</think>', '', story_text, flags=re.DOTALL)
+    story_text = re.sub(r'^.*?#######.*?\n', '', story_text, flags=re.DOTALL)
+    story_text = re.sub(r'that story generated\s*$', '', story_text, flags=re.DOTALL)
+    story_text = story_text.strip()
     print(f"Parsed story text: {story_text[:100]}...")  # Debugging output, show first 100 chars
     
     # Extract style from story text
@@ -160,14 +164,14 @@ def parse_story_blocks(story_text):
             "chosen_style": CHOSEN_STYLE or "Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting"
         }
 
-    # Updated regex to make characters field optional
+    # Updated regex to make characters field optional and handle last scene properly
     pattern = re.compile(
         r'\*\*\[(\d{2}:\d{2})-(\d{2}:\d{2})\]\*\*\s*'
         r'(?:\*\*Title:\*\*\s*(.*?)\s*\n)?'  # Optional Title
         r'(?:\*\*characters:\*\*\s*(.*?)\s*\n)?'  # Optional characters field
         r'\*\*Visual:\*\*\s*(.*?)\s*\n'
         r'\*\*Sound:\*\*\s*(.*?)\s*\n'
-        r'\*\*Text:\*\*\s*(.*?)\s*\n',
+        r'\*\*Text:\*\*\s*(.*?)(?=\s*(?:\*\*\[|\Z))',  # Text field ends at next scene or end of string
         re.DOTALL
     )
 
@@ -800,9 +804,12 @@ async def main_test():
         with open(meta_file, "w", encoding="utf-8") as f:
             json.dump(translated_meta, f, ensure_ascii=False, indent=2)
 
-    
-#if __name__ == "__main__":
-#    asyncio.run(main_test())
+DEBUG = True    
 if __name__ == "__main__":
-     while True:
-         asyncio.run(main_production())
+    if DEBUG:
+        print("Running in DEBUG mode...")
+        asyncio.run(main_test())
+    else:
+        print("Running in PRODUCTION mode...")
+        while True:
+            asyncio.run(main_production())
