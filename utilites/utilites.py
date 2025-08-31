@@ -6,7 +6,19 @@ import re
 sys.path.append(r"C:\AI\Zonos-for-windows\.venv\Lib\site-packages")
 import gc
 import torch
+import requests
 
+
+def message_to_me(message):
+    """Send notification message via relay server to Telegram"""
+    try:
+        url = "http://192.168.1.160:1880/message"
+        payload = {"message": message}
+        response = requests.post(url, json=payload, timeout=10)
+        response.raise_for_status()
+        print(f"✅ Notification sent: {message}")
+    except Exception as e:
+        print(f"❌ Failed to send notification: {e}")
 def clear_vram():
     """Clear VRAM by collecting garbage and emptying CUDA cache."""
     gc.collect()  # Collect Python garbage

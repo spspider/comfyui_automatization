@@ -18,12 +18,13 @@ from utilites.text2audiof5 import run_f5_tts, run_speecht5_tts
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
-from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename, create_youtube_csv
+from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename, create_youtube_csv, message_to_me
 from workflow_run.video2audio_workflow import run_video2audio
 from workflow_run.wan_2_1_t2v_gguf_api import wan_2_1_t2v_gguf_api
 from utilites.argotranslate import translateTextBlocks, translate_meta
 from utilites.upload_youtube import upload_video
 from workflow_run.text_to_music_ace_step import run_text2music
+from workflow_run.video_wan2_2_5B_ti2v import func_video_wan2_2_5B_ti2v
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
@@ -234,10 +235,56 @@ def update_blocks_with_real_duration(blocks):
     return blocks
 
 from datetime import datetime
+
+def save_status(step, scene_idx=None, total_scenes=None):
+    """Save current pipeline status while preserving existing data"""
+    # Load existing status to preserve other fields
+    try:
+        with open("status.json", "r") as f:
+            status = json.load(f)
+    except FileNotFoundError:
+        status = {}
+    
+    # Update pipeline-specific fields
+    status.update({
+        "step": step,
+        "scene_idx": scene_idx,
+        "total_scenes": total_scenes,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    with open("status.json", "w") as f:
+        json.dump(status, f, indent=2)
+
+def load_status():
+    """Load pipeline status"""
+    try:
+        with open("status.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
     
 def generate_videos(blocks, meta, negative_prompt="low quality, distorted, static"):
     video_paths = []
+    status = load_status()
+    start_idx = 1
+    
+    # Check if resuming from previous run
+    if status and status.get("step") == "generate_videos":
+        start_idx = status.get("scene_idx", 1) + 1
+        print(f"🔄 Resuming video generation from scene {start_idx}")
+        # Load existing videos
+        for i in range(1, start_idx):
+            existing_video = RESULT_DIR / f"scene_{i:02d}_video.mp4"
+            if existing_video.exists():
+                video_paths.append(str(existing_video))
+    
+    save_status("generate_videos", 0, len(blocks))
+    
     for idx, blk in enumerate(blocks, 1):
+        if idx < start_idx:
+            continue
+            
         print(f"[Scene {idx}] Generating: {blk['title']}")
         duration = blk.get('duration', 10)
         if not isinstance(duration, int) or duration > 10 or duration <= 0:
@@ -247,8 +294,9 @@ def generate_videos(blocks, meta, negative_prompt="low quality, distorted, stati
         print(f"⌛ Waiting for completion... [{timestamp}]")
         positive_prompt = meta['characters'] + "\n" + blk['visual']
         additional_style = f"STYLE: {meta.get('chosen_style', 'Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting')}\n"
-        clip = wan_2_1_t2v_gguf_api(additional_style +" PROMPT:"+ positive_prompt,  video_seconds=5) # override duration for testing purposes
 
+        clip = func_video_wan2_2_5B_ti2v(additional_style +" PROMPT:"+ positive_prompt,  video_seconds=5) # override duration for testing purposes
+        #clip = wan_2_1_t2v_gguf_api(additional_style +" PROMPT:"+ positive_prompt,  video_seconds=5) # override duration for testing purposes
         # clip = text_to_video_wan_api_nouugf(blk, negative_prompt, video_seconds=duration)
         # clip = run_text2video(blk['visual'])
         if clip:
@@ -257,9 +305,12 @@ def generate_videos(blocks, meta, negative_prompt="low quality, distorted, stati
             # os.unlink(clip)  # Remove the original file
             video_paths.append(str(new_name))
             print(f"✅ Video for scene {idx} saved as: {new_name}")
+            save_status("generate_videos", idx, len(blocks))  # Save progress after each scene
         else:
             print(f"⚠️ No clip found for scene {idx}")
         clear_vram()
+    
+    save_status("generate_videos_complete", len(blocks), len(blocks))
     return video_paths
 
 def each_audio_scene(video_path, prompt, negative_prompt="low quality, noise, music, song", idx=1, newname=None, volumelevel=0.7):
@@ -578,14 +629,21 @@ async def main_production():
     video_output_dir = Path("video_output")
     video_output_dir.mkdir(exist_ok=True)
 
-    if DEBUG:
-        print("DEBUG mode: skip requesting new blocks.")
+    # Check if resuming from previous run
+    status = load_status()
+    if status and status.get("step") == "generate_videos":
+        print(f"🔄 Resuming from previous run at step: {status['step']}, scene: {status.get('scene_idx', 'N/A')}")
+        # Load existing story and blocks
         meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
     else:
-        clean_comfy_output(RESULT_DIR)  
-        meta, blocks = await get_story_blocks_with_retries("qwen", RESULT_DIR)
-    if not blocks:
-        return
+        if DEBUG:
+            print("DEBUG mode: skip requesting new blocks.")
+            meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
+        else:
+            clean_comfy_output(RESULT_DIR)  
+            meta, blocks = await get_story_blocks_with_retries("qwen", RESULT_DIR)
+        if not blocks:
+            return
 
     print(f"Parsed {len(blocks)} scenes.")
     
@@ -714,6 +772,15 @@ async def main_production():
     #         shutil.move(str(json_file), str(uploaded_dir / json_file.name))
     
     clear_vram()
+    # Clear pipeline status after successful completion, keep style_index
+    status = load_status()
+    if status:
+        # Keep only style-related data
+        new_status = {k: v for k, v in status.items() if k == "current_style_index"}
+        with open("status.json", "w") as f:
+            json.dump(new_status, f, indent=2)
+    
+    message_to_me("🎬 Video generation pipeline completed successfully!")
     #############END#############
 async def main_test(): 
     meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
@@ -721,6 +788,7 @@ async def main_test():
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
     blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
     print("Starting test pipeline...")
+    message_to_me(f"🎬 Video generated {meta['video_title']}")
 ###### DO NOT DELETE BLOCK ABOVE ######
     return
     ####################TTS for RU########################
@@ -804,7 +872,7 @@ async def main_test():
         with open(meta_file, "w", encoding="utf-8") as f:
             json.dump(translated_meta, f, ensure_ascii=False, indent=2)
 
-DEBUG = True    
+DEBUG = False    
 if __name__ == "__main__":
     if DEBUG:
         print("Running in DEBUG mode...")
