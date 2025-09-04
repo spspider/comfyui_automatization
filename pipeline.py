@@ -31,6 +31,7 @@ RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG = False
+LANGUAGES = ["en", "ru", "ro"]  # Languages to generate (first is main)
 
 from utilites.subtitles import create_full_subtitles_text, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
@@ -43,23 +44,14 @@ async def generate_story(provider="qwen"):
     # Define animation styles with consistent visual elements
     styles = [
         "Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting",
+        "Disney 3D animation style, vibrant colors, expressive character faces, dynamic poses, fairy tale atmosphere, magical lighting effects",
+        "Ultrarealistic movie style, photorealistic textures, intricate lighting, cinematic depth of field, lifelike character models",
         "Studio Ghibli anime style, hand-drawn animation, soft watercolor backgrounds, detailed nature elements, warm lighting, whimsical character design",
-        "Disney 2D animation style, vibrant colors, expressive character faces, dynamic poses, fairy tale atmosphere, magical lighting effects",
         "Cartoon Network style, bold outlines, flat colors, exaggerated expressions, playful character design, bright saturated colors",
         "Realistic CGI animation style, photorealistic textures, detailed lighting, cinematic camera angles, high-quality rendering",
-        "Anime manga style, cel-shaded animation, dramatic lighting, expressive eyes, dynamic action poses, vibrant colors",
-        "Watercolor painting style, soft brush strokes, flowing colors, artistic texture, dreamy atmosphere, hand-painted look",
-        "Retro 80s synthwave style, neon colors, geometric patterns, cyberpunk aesthetic, glowing effects, nostalgic vibes",
-        "Paper cutout animation style, layered paper textures, shadow effects, handcrafted appearance, stop-motion feel",
-        "Oil painting style, rich textures, classical art technique, warm color palette, Renaissance-inspired lighting",
-        "Comic book style, bold outlines, halftone patterns, speech bubbles, dynamic panels, superhero aesthetic",
-        "Isometric 3D style, geometric precision, clean angles, modern design, architectural visualization, technical illustration",
-        "Holographic projection style, translucent surfaces, rainbow light refractions, floating digital elements, futuristic transparency effects",
-        "Quantum particle visualization style, energy fields, glowing orbs, particle trails, scientific visualization, molecular structures",
-        "Fractal geometry style, infinite recursive patterns, mathematical precision, kaleidoscopic effects, sacred geometry, hypnotic spirals",
-        "Neural network visualization style, interconnected nodes, synaptic connections, brain-like patterns, electric impulses, AI consciousness",
-        "Dimensional portal style, reality tears, space-time distortions, interdimensional rifts, cosmic gateways, parallel universe glimpses",
-        "Metamorphic reality style, constantly shifting forms, reality glitches, impossible geometries, Escher-like paradoxes, dream logic"
+        "Cyberpunk 2077 style, neon lights, digital cityscapes, cybernetic characters, dark and gritty atmosphere, futuristic technology",
+        "Ultra-detailed 3D animation, hyper-realistic textures, intricate lighting, cinematic depth of field, lifelike character models",
+        "Enchanting fantasy style, ethereal lighting, magical elements, whimsical character design, vibrant colors, dreamy atmosphere",
     ]
     
     # Load status and select next style sequentially
@@ -172,7 +164,7 @@ def parse_story_blocks(story_text):
         r'(?:\*\*characters:\*\*\s*(.*?)\s*\n)?'  # Optional characters field
         r'\*\*Visual:\*\*\s*(.*?)\s*\n'
         r'\*\*Sound:\*\*\s*(.*?)\s*\n'
-        r'\*\*Text:\*\*\s*(.*?)(?=\s*(?:\*\*\[|\Z))',  # Text field ends at next scene or end of string
+        r'\*\*Text:\*\*\s*(.*?)(?=\s*(?:\*\*\[|\n\s*[^\*]|\Z))',  # Text field ends at next scene, newline with non-asterisk content, or end of string
         re.DOTALL
     )
 
@@ -656,41 +648,37 @@ async def main_production():
     
     vids = list_files_in_result("scene_*_audio.mp4","result") 
 
-    blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
+    blocks = translateTextBlocks(blocks, [lang for lang in LANGUAGES if lang != "en"])  # 3. переводим текст с английского на другие языки
     # here we can create different languages
     original_vids = vids.copy()  # Keep original video list
-    for language in ["en", "ro", "ru"]:
+    for language in LANGUAGES:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
     clear_vram()
-    ####################TTS for RU########################
-    language = "ru"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        run_f5_tts(
-            language=language,
-            gen_text=blk["text"][language],
-            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################TTS for EN########################
-    language = "en"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        generate_audio_from_text(
-            language=language,
-            text=blk["text"][language],
-            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################TTS for EN########################
-    language = "ro"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        generate_audio_from_text(
-            language=language,
-            text=blk["text"][language],
-            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################################END TTS#############       
+    # Generate TTS for all languages
+    for language in LANGUAGES:
+        for idx, blk in enumerate(blocks, 1):
+            if language == "ru":
+                run_f5_tts(
+                    language=language,
+                    gen_text=blk["text"][language],
+                    output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+                )
+            if language == "en":
+                generate_audio_from_text(
+                    language=language,
+                    text=blk["text"][language],
+                    output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+                )
+            if language == "ro":
+                run_speecht5_tts(
+                    language=language,
+                    gen_text=blk["text"][language],
+                    output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+                    )
     clear_vram()
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")
-    for language in ["en", "ro", "ru"]:
+    for language in LANGUAGES:
         for idx, blk in enumerate(blocks, 1):
             merge_audio_and_video(
                 blocks=blocks,
@@ -700,7 +688,7 @@ async def main_production():
                 original_audio_volume=0.3,
                 voice_volume=4.0
             )
-    for language in ["en", "ro", "ru"]:
+    for language in LANGUAGES:
         vids = list_files_in_result(f"scene_*_merged_{language}.mp4","result") 
         video = combine_videos(vids, f"final_movie_{language}", output_path=Path("result/"))
     timestamp = datetime.now().strftime('%H:%M')
@@ -712,7 +700,7 @@ async def main_production():
                                      duration=VideoFileClip(str(RESULT_DIR/"final_movie_en.mp4")).duration,
                                      output_name=RESULT_DIR / "final_movie_music.mp4")
     
-    for language in ["en", "ro", "ru"]:
+    for language in LANGUAGES:
         output_path=f"video_output/{sanitize_filename(meta['video_title'])}_{language}"
         merge_audio_and_video(
             blocks=blocks,
@@ -726,7 +714,7 @@ async def main_production():
     
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP [{timestamp}]")
-    for language in ["en", "ro", "ru"]:
+    for language in LANGUAGES:
         subtitle_file = create_full_subtitles_text(blocks, language)
         subtitle_output = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.srt"
         shutil.copy(subtitle_file, subtitle_output)
@@ -735,7 +723,7 @@ async def main_production():
     #save meta
     # Save meta to video_output directory
     ################# translate meta #################
-    for language in ["en", "ro", "ru"]:
+    for language in LANGUAGES:
         if language == "en":
             translated_meta = meta
         else:
@@ -743,33 +731,6 @@ async def main_production():
         meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
         with open(meta_file, "w", encoding="utf-8") as f:
             json.dump(translated_meta, f, ensure_ascii=False, indent=2)
-    ###### UPLOAD VIDEOS TO YOUTUBE ######
-    # for language in ["en", "ro", "ru"]:
-    #     meta_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
-    #     with open(meta_file, "r", encoding="utf-8") as f:
-    #         translated_meta = json.load(f)
-        
-    #     video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
-    #     upload_video(
-    #         file=str(video_file),
-    #         title=translated_meta["video_title"],
-    #         description=translated_meta["video_description"],
-    #         tags=translated_meta["video_hashtags"].split(", "),
-    #         language=language,
-    #         privacyStatus="public"
-    #     )
-    # ############### move uploaded videos to folder uploaded_videos ###############
-    # uploaded_dir = Path("uploaded_videos")
-    # uploaded_dir.mkdir(exist_ok=True)
-    
-    # for language in ["en", "ro", "ru"]:
-    #     video_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.mp4"
-    #     json_file = Path("video_output") / f"{sanitize_filename(meta['video_title'])}_{language}.json"
-        
-    #     if video_file.exists():
-    #         shutil.move(str(video_file), str(uploaded_dir / video_file.name))
-    #     if json_file.exists():
-    #         shutil.move(str(json_file), str(uploaded_dir / json_file.name))
     
     clear_vram()
     # Clear pipeline status after successful completion, keep style_index
@@ -780,42 +741,31 @@ async def main_production():
         with open("status.json", "w") as f:
             json.dump(new_status, f, indent=2)
     
-    message_to_me("🎬 Video generation pipeline completed successfully!")
+    message_to_me(f"🎬 Video generated {meta['video_title']}")
     #############END#############
 async def main_test(): 
     meta, blocks = parse_story_blocks((RESULT_DIR / "story.txt").read_text(encoding="utf-8"))
     print(f"Parsed {len(blocks)} scenes.")
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
-    blocks = translateTextBlocks(blocks, ["ru","ro"])  # 3. переводим текст на английский
+    blocks = translateTextBlocks(blocks, [lang for lang in LANGUAGES if lang != "en"])  # 3. переводим текст на английский
     print("Starting test pipeline...")
-    message_to_me(f"🎬 Video generated {meta['video_title']}")
 ###### DO NOT DELETE BLOCK ABOVE ######
     return
-    ####################TTS for RU########################
-    language = "ru"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        run_f5_tts(
-            language=language,
-            gen_text=blk["text"][language],
-            output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################TTS for EN########################
-    language = "en"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        generate_audio_from_text(
-            language=language,
-            text=blk["text"][language],
-            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################TTS for EN########################
-    language = "ro"  # Change to "ru" or "ro" for other languages
-    for idx, blk in enumerate(blocks, 1):
-        generate_audio_from_text(
-            language=language,
-            text=blk["text"][language],
-            output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
-        )
-    ####################################END TTS#############       
+    # Generate TTS for all languages
+    for language in LANGUAGES:
+        for idx, blk in enumerate(blocks, 1):
+            if language == "ru":
+                run_f5_tts(
+                    language=language,
+                    gen_text=blk["text"][language],
+                    output_file=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+                )
+            else:
+                generate_audio_from_text(
+                    language=language,
+                    text=blk["text"][language],
+                    output_path=RESULT_DIR / f"scene_{idx:02d}_voice_{language}.wav",
+                )       
 
     timestamp = datetime.now().strftime('%H:%M')
     print(f"⌛ TIMESTAMP merge_audio_and_video[{timestamp}]")

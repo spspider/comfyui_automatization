@@ -2,8 +2,8 @@
   "3": {
     "inputs": {
       "seed": 376015910546792,
-      "steps": 20,
-      "cfg": 5,
+      "steps": 25,
+      "cfg": 7.5,
       "sampler_name": "uni_pc",
       "scheduler": "simple",
       "denoise": 1,
@@ -44,7 +44,7 @@
   },
   "7": {
     "inputs": {
-      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "text": "static, blurred details, subtitles, still, overall gray, worst quality, low quality, JPEG compression residue, ugly, mutilated, redundant fingers, poorly painted hands, poorly painted faces, deformed, disfigured, deformed limbs, fused fingers, cluttered background, three legs, a lot of people in the background, upside down, erratic movement, teleporting, jumping randomly, floating objects, inconsistent physics, morphing shapes, distorted proportions, flickering, jittery motion, disgasting, vomit, ugly face, dublicate, slow motion, unrealistic physics, sad",
       "clip": [
         "38",
         0

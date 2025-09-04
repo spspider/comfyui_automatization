@@ -197,7 +197,7 @@ def run_speecht5_tts(language, gen_text, output_file, ref_audio=None, ref_text=N
         )
 
     # Сохранение результата
-    sf.write(output_file, generated_waveform.cpu().numpy(), 44100, subtype="PCM_16")
+    sf.write(output_file, generated_waveform.cpu().numpy(), 16000, subtype="PCM_16")
     print(f"Speech generated and saved to '{output_file}'")
     return output_file
 
@@ -210,7 +210,7 @@ async def main():
     # )
     # print(f"Generated audio saved to: {output_path}")
     
-    # # Пример для английского
+    # # # Пример для английского
     # output_path = run_f5_tts(
     #     language="en",
     #     gen_text="Text for generation in English",
@@ -221,7 +221,7 @@ async def main():
     # Пример для румынского
     output_path = run_speecht5_tts(
         language="ro",
-        gen_text="Salut! Acesta este un test generat. _key_values` is deprecated and will be removed in Transformers v4.58.0. You should pass an instance of `EncoderDecoderCache` instead, e.",
+        gen_text="Salut! Acesta este un test generat. ",
         output_file=r"C:\AI\comfyui_automatization\result\output_ro.wav"
     )
     print(f"Generated audio saved to: {output_path}")
