@@ -184,3 +184,66 @@ def clean_text_captions(blocks):
         block['text'] = re.sub(r'\s+', ' ', cleaned).strip()
     
     return blocks
+
+def burn_tts_to_video(video_paths, blocks):
+    """
+    Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
+    If the video has no audio, use only TTS.
+    """
+    updated_videos = []
+    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
+
+    for idx, video_path in enumerate(video_paths, 1):
+        video_path = Path(video_path)
+        tts_audio = RESULT_DIR / f"scene_{idx:02d}_voice.wav"
+        output_path = RESULT_DIR / f"scene_{idx:02d}_tts.mp4"
+
+        if not tts_audio.exists():
+            print(f"⚠️ TTS audio not found for scene {idx}: {tts_audio}")
+            updated_videos.append(str(video_path))
+            continue
+
+        # Check if video has audio
+        probe_cmd = [
+            ffmpeg, "-i", str(video_path),
+            "-hide_banner", "-loglevel", "error", "-show_streams", "-select_streams", "a", "-of", "default=noprint_wrappers=1:nokey=1"
+        ]
+        has_audio = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=codec_type",
+             "-of", "default=noprint_wrappers=1:nokey=1",
+             str(video_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        ).stdout.decode().strip() != ""
+
+        if has_audio:
+            print(f"🎧 Scene {idx} has audio — mixing with TTS.")
+            cmd = [
+                ffmpeg, "-y",
+                "-i", Path(video_path),
+                "-i", Path(tts_audio),
+                "-filter_complex",
+                "[0:a]volume=0.6[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
+                "-map", "0:v", "-map", "[aout]",
+                "-c:v", "copy", "-c:a", "aac", "-shortest",
+                Path(output_path)
+            ]
+        else:
+            print(f"🔈 Scene {idx} has no audio — adding only TTS.")
+            cmd = [
+                ffmpeg, "-y",
+                "-i", Path(video_path),
+                "-i", Path(tts_audio),
+                "-map", "0:v", "-map", "1:a",
+                "-c:v", "copy", "-c:a", "aac", "-shortest",
+                Path(output_path)
+            ]
+
+        try:
+            subprocess.run(cmd, check=True)
+            updated_videos.append(str(output_path))
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to merge TTS with {video_path.name}: {e}")
+            updated_videos.append(str(video_path))
+    return updated_videos

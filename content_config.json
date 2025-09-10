@@ -1,0 +1,43 @@
+{
+  "content_preferences": {
+    "animation_weight": 0.6,
+    "live_action_weight": 0.4,
+    "avoid_themes": ["pets_only", "coffee_only"],
+    "preferred_themes": ["tech", "lifestyle", "education", "creative", "health"]
+  },
+  "style_rotation": {
+    "animation_styles": [
+      "Pixar 3D animation style, realistic textures, cinematic lighting",
+      "Disney 3D animation style, vibrant colors, magical atmosphere",
+      "Studio Ghibli anime style, hand-drawn animation, watercolor backgrounds",
+      "Cartoon Network style, bold outlines, flat colors, exaggerated expressions",
+      "Realistic CGI animation, photorealistic textures, cinematic camera work",
+      "Cyberpunk style, neon lights, futuristic cityscapes",
+      "Fantasy style, ethereal lighting, magical elements",
+      "Minimalist flat design, clean lines, geometric shapes",
+      "Claymation stop-motion, tactile textures, handcrafted appearance"
+    ],
+    "live_action_styles": [
+      "Cinematic movie style, professional lighting, shallow depth of field",
+      "Documentary style, natural lighting, handheld camera movement",
+      "Commercial style, bright lighting, clean composition",
+      "Vlog style, casual lighting, personal perspective",
+      "Music video style, dynamic lighting, creative angles",
+      "Social media style, trendy filters, vertical composition",
+      "Vintage film style, warm tones, film grain",
+      "Modern minimalist style, clean backgrounds, soft lighting"
+    ]
+  },
+  "theme_categories": {
+    "tech": ["AI innovations", "gadget reviews", "coding tutorials", "tech news", "app demos"],
+    "lifestyle": ["morning routines", "productivity hacks", "home organization", "self-care", "minimalism"],
+    "education": ["science experiments", "history facts", "language learning", "math tricks", "study tips"],
+    "entertainment": ["movie reviews", "gaming highlights", "music discoveries", "comedy skits", "talent shows"],
+    "health": ["workout routines", "healthy recipes", "mental health tips", "meditation", "nutrition facts"],
+    "travel": ["destination guides", "travel hacks", "cultural experiences", "food tours", "adventures"],
+    "business": ["entrepreneurship", "marketing strategies", "success stories", "financial advice", "career tips"],
+    "creative": ["art tutorials", "photography tips", "music production", "writing advice", "design principles"],
+    "nature": ["wildlife documentaries", "environmental facts", "gardening", "weather phenomena", "conservation"],
+    "food": ["recipe tutorials", "restaurant reviews", "cooking hacks", "food science", "cultural cuisine"]
+  }
+}

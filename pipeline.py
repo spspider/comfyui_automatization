@@ -25,13 +25,15 @@ from utilites.argotranslate import translateTextBlocks, translate_meta
 from utilites.upload_youtube import upload_video
 from workflow_run.text_to_music_ace_step import run_text2music
 from workflow_run.video_wan2_2_5B_ti2v import func_video_wan2_2_5B_ti2v
+from utilites.utilites import merge_audio_and_video
+from utilites.subtitles import burn_tts_to_video
 
 COMFY_OUTPUT_DIR = Path(r"C:/AI/ComfyUI_windows_portable/ComfyUI/output")
 RESULT_DIR = Path(r"C:/AI/comfyui_automatization/result")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG = False
-LANGUAGES = ["en", "ru", "ro"]  # Languages to generate (first is main)
+LANGUAGES = ["en", "ru"]  # Languages to generate (first is main)
 
 from utilites.subtitles import create_full_subtitles_text, create_video_with_subtitles, clean_text_captions, burn_subtitles 
 
@@ -41,75 +43,132 @@ CHOSEN_STYLE = None
 async def generate_story(provider="qwen"):
     global CHOSEN_STYLE
     
-    # Define animation styles with consistent visual elements
-    styles = [
-        "Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting",
-        "Disney 3D animation style, vibrant colors, expressive character faces, dynamic poses, fairy tale atmosphere, magical lighting effects",
-        "Ultrarealistic movie style, photorealistic textures, intricate lighting, cinematic depth of field, lifelike character models",
-        "Studio Ghibli anime style, hand-drawn animation, soft watercolor backgrounds, detailed nature elements, warm lighting, whimsical character design",
-        "Cartoon Network style, bold outlines, flat colors, exaggerated expressions, playful character design, bright saturated colors",
-        "Realistic CGI animation style, photorealistic textures, detailed lighting, cinematic camera angles, high-quality rendering",
-        "Cyberpunk 2077 style, neon lights, digital cityscapes, cybernetic characters, dark and gritty atmosphere, futuristic technology",
-        "Ultra-detailed 3D animation, hyper-realistic textures, intricate lighting, cinematic depth of field, lifelike character models",
-        "Enchanting fantasy style, ethereal lighting, magical elements, whimsical character design, vibrant colors, dreamy atmosphere",
-    ]
+    # Load configuration
+    try:
+        with open("content_config.json", "r") as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        print("⚠️ content_config.json not found, using defaults")
+        config = {
+            "content_preferences": {"animation_weight": 0.6, "live_action_weight": 0.4},
+            "style_rotation": {"animation_styles": [], "live_action_styles": []},
+            "theme_categories": {"lifestyle": ["general content"]}
+        }
     
-    # Load status and select next style sequentially
+    content_types = ["animation", "live_action"]
+    animation_styles = config["style_rotation"]["animation_styles"]
+    live_action_styles = config["style_rotation"]["live_action_styles"]
+    theme_categories = config["theme_categories"]
+    
+    # Load status and rotate through content types and styles
     status_file = Path("status.json")
     if status_file.exists():
         with open(status_file, "r") as f:
             status = json.load(f)
+        current_content_index = status.get("current_content_index", 0)
         current_style_index = status.get("current_style_index", 0)
+        current_theme_category = status.get("current_theme_category", "lifestyle")
     else:
+        current_content_index = 0
         current_style_index = 0
+        current_theme_category = "lifestyle"
     
-    # Select current style and update index
-    chosen_style = styles[current_style_index]
-    next_index = (current_style_index + 1) % len(styles)
+    # Select content type and style
+    content_type = content_types[current_content_index]
+    
+    if content_type == "animation":
+        chosen_style = animation_styles[current_style_index % len(animation_styles)]
+    else:
+        chosen_style = live_action_styles[current_style_index % len(live_action_styles)]
+    
+    # Rotate theme category
+    theme_keys = list(theme_categories.keys())
+    current_theme_key = theme_keys[current_content_index % len(theme_keys)]
+    themes = theme_categories[current_theme_key]
+    
+    # Update indices for next run
+    next_content_index = (current_content_index + 1) % len(content_types)
+    next_style_index = (current_style_index + 1) % 9  # Max styles available
     
     # Save updated status
-    status = {"current_style_index": next_index}
+    status = {
+        "current_content_index": next_content_index,
+        "current_style_index": next_style_index,
+        "current_theme_category": current_theme_key
+    }
     with open(status_file, "w") as f:
         json.dump(status, f, indent=2)
     
     CHOSEN_STYLE = chosen_style
-    print(f"🎨 Using style {current_style_index + 1}/{len(styles)}: {chosen_style[:50]}...")
+    print(f"🎨 Content: {content_type} | Style: {chosen_style[:50]}... | Theme: {current_theme_key}")
     
-    prompt = (
-        "You are a viral YouTube Shorts creator. Based on trending analysis, create VIRAL content focusing on these HIGH-PERFORMING themes:\n"
-        "🔥 TOP VIRAL THEMES (prioritize these):\n"
-        "- DIY transformations (wall makeovers, room upgrades, crafts)\n"
-        "- Pet content (dogs baking, cats cooking, pet tricks, pet challenges)\n"
-        "- Coffee/food magic (coffee art, cooking fails, food transformations)\n"
-        "- Quick tutorials (5-minute fixes, 30-second hacks, instant results)\n"
-        "- Satisfying content (slime making, glitter transformations, ASMR crafts)\n"
-        "- Cute chaos (pets helping with tasks, cooking disasters turned wins)\n\n"
-        "📈 VIRAL FORMULA: Use these proven elements:\n"
-        "- Start with hook: 'Watch me transform...', 'This dog does WHAT?', 'DIY hack that went viral!'\n"
-        "- Include pets as helpers/characters (dogs, cats, fluffy animals)\n"
-        "- Show clear before/after transformations\n"
-        "- Use satisfying visual elements (mixing, pouring, revealing)\n"
-        "- End with surprising twist or amazing result\n\n"
-        f"STYLE: {chosen_style}\n"
-        "Create a 30-second video script with exactly 6 scenes (5 seconds each).\n"
-        "IMPORTANT: Maintain visual continuity - repeat character descriptions and settings in each scene.\n"
-        "Include subtle visual comedy and wordplay throughout the scenario. Create original humor through: unexpected character reactions, clever visual puns, amusing misunderstandings, or witty dialogue. Avoid repeating common jokes - be creative and original with each new scenario.\n"
-        "\n"
-        "**VIDEO_Title:** Viral-style title (use: 'DIY', 'This Dog', 'Watch Me', '30 Seconds', 'Viral', 'Magic')\n"
-        "**VIDEO_Description:** YouTube description with hook and call-to-action.\n"
-        "**VIDEO_Hashtags:** #diy, #viral, #pets, #transformation, #satisfying (choose 3-5 trending ones)\n"
-        "**Overall_Music:** Upbeat, energetic background music description (no lyrics).\n"
-        "**characters:** Detailed character descriptions (include pets, use names).\n"
-        "\n"
-        "**[00:00-00:05]**\n"
-        "**Title:** Scene title\n"
-        "**Visual:** Detailed scene describe front view and back view, include detalization of all components in a scene be very specific (10+ sentences, repeat character details from previous scenes)\n"
-        "**Sound:** Ambient sounds/effects\n"
-        "**Text:** Engaging narrator text, use 1-3 sentences, dont use styles\n"
-        "---\n"
-        "Continue for: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30]\n"
-        "Final scene text must include: 'Subscribe!'\n"
-    )
+    # Create diverse prompt based on content type
+    if content_type == "animation":
+        prompt = f"""
+You are a viral YouTube Shorts creator. Create diverse, engaging content that avoids repetitive themes.
+
+🎯 CONTENT VARIETY - Choose ONE theme from: {', '.join(themes)}
+AVOID: Overused pet/coffee content. Be creative and original!
+
+📈 VIRAL ELEMENTS:
+- Strong hook in first 3 seconds
+- Clear value proposition or entertainment
+- Surprising twist or reveal
+- Call-to-action ending
+
+STYLE: {chosen_style}
+
+Create a 30-second video script with exactly 6 scenes (5 seconds each).
+MAINTAIN visual continuity - repeat character/setting descriptions.
+
+**VIDEO_Title:** Engaging title (avoid overused phrases)
+**VIDEO_Description:** YouTube description with hook
+**VIDEO_Hashtags:** 3-5 relevant trending hashtags
+**Overall_Music:** Background music description (no lyrics)
+**characters:** Detailed character descriptions
+
+**[00:00-00:05]**
+**Title:** Scene title
+**Visual:** Detailed scene description (10+ sentences, specific details)
+**Sound:** Ambient sounds/effects
+**Text:** Engaging narrator text (1-3 sentences)
+---
+Continue for: [00:05-00:10], [00:10-00:15], [00:15-00:20], [00:20-00:25], [00:25-00:30]
+Final scene must include: 'Subscribe!'
+"""
+    else:
+        prompt = f"""
+You are a viral YouTube Shorts creator. Create engaging LIVE-ACTION content.
+
+🎯 CONTENT THEME: {current_theme_key.upper()} - Choose from: {', '.join(themes)}
+
+📈 LIVE-ACTION VIRAL ELEMENTS:
+- Real people, authentic scenarios
+- Practical demonstrations or tutorials
+- Before/after transformations
+- Relatable situations
+- Clear educational or entertainment value
+
+STYLE: {chosen_style}
+
+Create a 30-second LIVE-ACTION video script with exactly 6 scenes (5 seconds each).
+Focus on REAL PEOPLE and practical content.
+
+**VIDEO_Title:** Engaging title
+**VIDEO_Description:** YouTube description
+**VIDEO_Hashtags:** 3-5 relevant hashtags
+**Overall_Music:** Background music description
+**characters:** Real people descriptions (ages, appearance, roles)
+
+**[00:00-00:05]**
+**Title:** Scene title
+**Visual:** Live-action scene description (real settings, people, actions)
+**Sound:** Ambient sounds/effects
+**Text:** Narrator text (1-3 sentences)
+---
+Continue for all 6 scenes, ending with 'Subscribe!'
+"""
+    
     return await generate_response_allmy(provider, prompt)
 
 def extract_style_from_story(story_text):
@@ -154,7 +213,7 @@ def parse_story_blocks(story_text):
             "video_hashtags": meta_match.group(3).strip().lower(),
             "overall_music": meta_match.group(4).strip(),
             "characters": meta_match.group(5).strip(),
-            "chosen_style": CHOSEN_STYLE or "Pixar 3D animation style, realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting"
+            "chosen_style": CHOSEN_STYLE or "realistic fur texture, smooth skin, no hard outlines, cozy atmosphere, cinematic composition, golden-hour lighting"
         }
 
     # Updated regex to make characters field optional and handle last scene properly
@@ -255,6 +314,48 @@ def load_status():
             return json.load(f)
     except FileNotFoundError:
         return None
+
+def track_content_diversity():
+    """Track and display content diversity statistics"""
+    try:
+        with open("content_history.json", "r") as f:
+            history = json.load(f)
+    except FileNotFoundError:
+        history = {"videos": [], "themes": {}, "styles": {}, "content_types": {}}
+    
+    status = load_status()
+    if status:
+        current_theme = status.get("current_theme_category", "unknown")
+        current_style = CHOSEN_STYLE or "unknown"
+        content_type = "animation" if any(keyword in current_style.lower() 
+                                        for keyword in ['animation', 'pixar', 'disney', 'cartoon']) else "live_action"
+        
+        # Update counters
+        history["themes"][current_theme] = history["themes"].get(current_theme, 0) + 1
+        history["content_types"][content_type] = history["content_types"].get(content_type, 0) + 1
+        history["styles"][current_style[:30]] = history["styles"].get(current_style[:30], 0) + 1
+        
+        # Add to video history
+        history["videos"].append({
+            "timestamp": datetime.now().isoformat(),
+            "theme": current_theme,
+            "content_type": content_type,
+            "style": current_style[:50]
+        })
+        
+        # Keep only last 20 videos
+        history["videos"] = history["videos"][-20:]
+        
+        # Save updated history
+        with open("content_history.json", "w") as f:
+            json.dump(history, f, indent=2)
+        
+        # Display diversity stats
+        print("\n📈 CONTENT DIVERSITY STATS:")
+        print(f"Themes: {dict(list(history['themes'].items())[-5:])}")
+        print(f"Content Types: {history['content_types']}")
+        print(f"Recent Videos: {len(history['videos'])}")
+        print("-" * 50)
     
 def generate_videos(blocks, meta, negative_prompt="low quality, distorted, static"):
     video_paths = []
@@ -272,6 +373,12 @@ def generate_videos(blocks, meta, negative_prompt="low quality, distorted, stati
                 video_paths.append(str(existing_video))
     
     save_status("generate_videos", 0, len(blocks))
+    
+    # Determine content type from style
+    content_type = "animation" if any(keyword in meta.get('chosen_style', '').lower() 
+                                    for keyword in ['animation', 'pixar', 'disney', 'cartoon', 'anime', 'ghibli']) else "live_action"
+    
+    print(f"🎬 Generating {content_type} content with style: {meta.get('chosen_style', 'default')[:50]}...")
     
     for idx, blk in enumerate(blocks, 1):
         if idx < start_idx:
@@ -385,216 +492,7 @@ def clean_comfy_output(DIR=COMFY_OUTPUT_DIR):
         except Exception as e:
             print(f"⚠️ Could not delete {file}: {e}") 
             
-def burn_tts_to_video(video_paths, blocks):
-    """
-    Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
-    If the video has no audio, use only TTS.
-    """
-    updated_videos = []
-    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
 
-    for idx, video_path in enumerate(video_paths, 1):
-        video_path = Path(video_path)
-        tts_audio = RESULT_DIR / f"scene_{idx:02d}_voice.wav"
-        output_path = RESULT_DIR / f"scene_{idx:02d}_tts.mp4"
-
-        if not tts_audio.exists():
-            print(f"⚠️ TTS audio not found for scene {idx}: {tts_audio}")
-            updated_videos.append(str(video_path))
-            continue
-
-        # Check if video has audio
-        probe_cmd = [
-            ffmpeg, "-i", str(video_path),
-            "-hide_banner", "-loglevel", "error", "-show_streams", "-select_streams", "a", "-of", "default=noprint_wrappers=1:nokey=1"
-        ]
-        has_audio = subprocess.run(
-            ["ffprobe", "-v", "error", "-select_streams", "a",
-             "-show_entries", "stream=codec_type",
-             "-of", "default=noprint_wrappers=1:nokey=1",
-             str(video_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        ).stdout.decode().strip() != ""
-
-        if has_audio:
-            print(f"🎧 Scene {idx} has audio — mixing with TTS.")
-            cmd = [
-                ffmpeg, "-y",
-                "-i", Path(video_path),
-                "-i", Path(tts_audio),
-                "-filter_complex",
-                "[0:a]volume=0.6[a0]; [1:a]volume=1.0[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
-                "-map", "0:v", "-map", "[aout]",
-                "-c:v", "copy", "-c:a", "aac", "-shortest",
-                Path(output_path)
-            ]
-        else:
-            print(f"🔈 Scene {idx} has no audio — adding only TTS.")
-            cmd = [
-                ffmpeg, "-y",
-                "-i", Path(video_path),
-                "-i", Path(tts_audio),
-                "-map", "0:v", "-map", "1:a",
-                "-c:v", "copy", "-c:a", "aac", "-shortest",
-                Path(output_path)
-            ]
-
-        try:
-            subprocess.run(cmd, check=True)
-            updated_videos.append(str(output_path))
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to merge TTS with {video_path.name}: {e}")
-            updated_videos.append(str(video_path))
-    return updated_videos
-
-
-def merge_audio_and_video(blocks, audio_path=None, video_path=None, output_path=None, original_audio_volume=1.0, voice_volume=3.0):
-    """
-    Merge TTS audio (scene_XX_voice.wav) into the corresponding video (scene_XX_*.mp4).
-    If the video is shorter than the audio, loop the necessary part from the end of the video to match the audio duration.
-    If the video has no audio, use only TTS. If it has audio, mix it with TTS.
-    
-    Args:
-        blocks: List of blocks (not used in current implementation)
-        audio_path: Path to the TTS audio file
-        video_path: Path to the input video file
-        output_path: Path for the output merged file
-        original_audio_volume: Volume level for the original video audio (default: 1.0)
-    """
-    ffmpeg = r"c:\ProgramData\chocolatey\bin\ffmpeg.exe"
-    ffprobe = r"c:\ProgramData\chocolatey\bin\ffprobe.exe"
-
-    # Get durations of video and audio
-    def get_duration(file_path):
-        cmd = [
-            ffprobe, "-v", "error", "-show_entries", "format=duration",
-            "-of", "json", str(file_path)
-        ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        return float(json.loads(result.stdout)["format"]["duration"])
-
-    video_duration = get_duration(video_path)
-    audio_duration = get_duration(audio_path)
-    print(f"🎥 Video duration: {video_duration}s, Audio duration: {audio_duration}s")
-    
-    # Check if the original video has audio
-    has_audio = subprocess.run(
-        [
-            ffprobe, "-v", "error", "-select_streams", "a",
-            "-show_entries", "stream=codec_type",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            str(video_path)
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    ).stdout.strip() != ""
-
-    temp_video = None
-    # If audio is longer than video, create a looped video
-    if audio_duration > video_duration:
-        print(f"🎥 Audio ({audio_duration}s) is longer than video ({video_duration}s) — looping video.")
-
-        temp_video = Path(output_path).with_suffix(".temp.mp4")
-        repeat_count = int(audio_duration // video_duration)
-        leftover = audio_duration % video_duration
-
-        if repeat_count >= 2:  
-            # Полноценный цикл видео repeat_count раз + остаток
-            loop_parts = []
-            for _ in range(repeat_count):
-                loop_parts.append(f"file '{video_path}'")
-            if leftover > 0.05:  # небольшой порог, чтобы избежать пустых обрезков
-                loop_parts.append(f"file '{video_path}'\ninpoint {video_duration - leftover}\nduration {leftover}")
-
-            list_file = temp_video.with_suffix(".txt")
-            list_file.write_text("\n".join(loop_parts), encoding="utf-8")
-
-            cmd_loop = [
-                ffmpeg, "-y",
-                "-f", "concat", "-safe", "0", "-i", str(list_file),
-                "-c", "copy",
-                str(temp_video)
-            ]
-            try:
-                subprocess.run(cmd_loop, check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Failed to loop video {video_path}: {e}")
-                return None
-
-            video_path = temp_video
-
-        else:
-            # Старое поведение — добавляем хвост
-            loop_duration = audio_duration - video_duration
-            loop_start = max(0, video_duration - loop_duration)
-            if has_audio:
-                cmd_loop = [
-                    ffmpeg, "-y",
-                    "-i", str(video_path),
-                    "-filter_complex",
-                    f"[0:v]trim=start={loop_start}:duration={loop_duration},setpts=PTS-STARTPTS[vloop];"
-                    f"[0:v][vloop]concat=n=2:v=1:a=0[vout];"
-                    f"[0:a]atrim=start={loop_start}:duration={loop_duration},asetpts=PTS-STARTPTS[aloop];"
-                    f"[0:a][aloop]concat=n=2:v=0:a=1[aout]",
-                    "-map", "[vout]", "-map", "[aout]",
-                    "-c:v", "libx264", "-c:a", "aac", "-preset", "fast",
-                    str(temp_video)
-                ]
-            else:
-                cmd_loop = [
-                    ffmpeg, "-y",
-                    "-i", str(video_path),
-                    "-filter_complex",
-                    f"[0:v]trim=start={loop_start}:duration={loop_duration},setpts=PTS-STARTPTS[vloop];"
-                    f"[0:v][vloop]concat=n=2:v=1:a=0[vout]",
-                    "-map", "[vout]",
-                    "-c:v", "libx264", "-preset", "fast",
-                    str(temp_video)
-                ]
-            try:
-                subprocess.run(cmd_loop, check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Failed to loop video {video_path}: {e}")
-                return None
-            video_path = temp_video
-
-    # Merge audio and video
-    if has_audio:
-        print(f"🎧 Scene has audio — mixing with TTS.")
-        cmd = [
-            ffmpeg, "-y",
-            "-i", str(video_path),
-            "-i", str(audio_path),
-            "-filter_complex",
-            f"[0:a]volume={original_audio_volume}[a0]; [1:a]volume={voice_volume}[a1]; [a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]",
-            "-map", "0:v", "-map", "[aout]",
-            "-c:v", "copy", "-c:a", "aac",
-            "-shortest", str(output_path)
-        ]
-    else:
-        print(f"🔈 Scene has no audio — adding only TTS.")
-        cmd = [
-            ffmpeg, "-y",
-            "-i", str(video_path),
-            "-i", str(audio_path),
-            "-map", "0:v", "-map", "1:a",
-            "-c:v", "copy", "-c:a", "aac",
-            "-shortest", str(output_path)
-        ]
-
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to merge TTS with {video_path}: {e}")
-        return None
-
-    # Clean up temporary video file if it was created
-    if temp_video and temp_video.exists():
-        temp_video.unlink()
-
-    return output_path
 
 def generate_combined_tts_audio(blocks, output_path):
     """
@@ -620,6 +518,9 @@ async def main_production():
     clean_comfy_output(COMFY_OUTPUT_DIR)  
     video_output_dir = Path("video_output")
     video_output_dir.mkdir(exist_ok=True)
+
+    # Track content diversity
+    track_content_diversity()
 
     # Check if resuming from previous run
     status = load_status()
@@ -750,7 +651,7 @@ async def main_test():
     blocks = translateTextBlocks(blocks, [lang for lang in LANGUAGES if lang != "en"])  # 3. переводим текст на английский
     print("Starting test pipeline...")
 ###### DO NOT DELETE BLOCK ABOVE ######
-    return
+   
     # Generate TTS for all languages
     for language in LANGUAGES:
         for idx, blk in enumerate(blocks, 1):

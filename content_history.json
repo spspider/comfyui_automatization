@@ -1,0 +1,147 @@
+{
+  "videos": [
+    {
+      "timestamp": "2025-09-06T22:19:32.527028",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "Commercial style, bright lighting, clean compositi"
+    },
+    {
+      "timestamp": "2025-09-06T23:46:49.288720",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Cartoon Network style, bold outlines, flat colors,"
+    },
+    {
+      "timestamp": "2025-09-06T23:48:45.060234",
+      "theme": "tech",
+      "content_type": "live_action",
+      "style": "Fantasy style, ethereal lighting, magical elements"
+    },
+    {
+      "timestamp": "2025-09-06T23:50:25.454743",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "Cinematic movie style, professional lighting, shal"
+    },
+    {
+      "timestamp": "2025-09-07T01:05:59.573294",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Disney 3D animation style, vibrant colors, magical"
+    },
+    {
+      "timestamp": "2025-09-07T01:07:24.229549",
+      "theme": "tech",
+      "content_type": "animation",
+      "style": "Realistic CGI animation, photorealistic textures, "
+    },
+    {
+      "timestamp": "2025-09-07T01:09:06.755241",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "Modern minimalist style, clean backgrounds, soft l"
+    },
+    {
+      "timestamp": "2025-09-07T02:22:41.428644",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "Claymation stop-motion, tactile textures, handcraf"
+    },
+    {
+      "timestamp": "2025-09-07T03:38:06.079897",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Pixar 3D animation style, realistic textures, cine"
+    },
+    {
+      "timestamp": "2025-09-07T04:52:27.997584",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Disney 3D animation style, vibrant colors, magical"
+    },
+    {
+      "timestamp": "2025-09-07T04:54:02.022428",
+      "theme": "tech",
+      "content_type": "animation",
+      "style": "Realistic CGI animation, photorealistic textures, "
+    },
+    {
+      "timestamp": "2025-09-07T06:17:36.161531",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "Social media style, trendy filters, vertical compo"
+    },
+    {
+      "timestamp": "2025-09-07T07:42:33.802230",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "Fantasy style, ethereal lighting, magical elements"
+    },
+    {
+      "timestamp": "2025-09-07T07:44:04.786192",
+      "theme": "tech",
+      "content_type": "animation",
+      "style": "Pixar 3D animation style, realistic textures, cine"
+    },
+    {
+      "timestamp": "2025-09-07T16:10:26.351568",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-07T17:00:44.666001",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-07T18:23:31.188826",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Studio Ghibli anime style, hand-drawn animation, w"
+    },
+    {
+      "timestamp": "2025-09-10T07:40:12.847465",
+      "theme": "tech",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-10T20:56:01.274121",
+      "theme": "tech",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-10T20:57:32.867187",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "Cinematic movie style, professional lighting, shal"
+    }
+  ],
+  "themes": {
+    "unknown": 10,
+    "tech": 7,
+    "lifestyle": 5
+  },
+  "styles": {
+    "unknown": 6,
+    "Commercial style, bright light": 1,
+    "Cartoon Network style, bold ou": 1,
+    "Fantasy style, ethereal lighti": 2,
+    "Cinematic movie style, profess": 2,
+    "Disney 3D animation style, vib": 2,
+    "Realistic CGI animation, photo": 2,
+    "Modern minimalist style, clean": 1,
+    "Claymation stop-motion, tactil": 1,
+    "Pixar 3D animation style, real": 2,
+    "Social media style, trendy fil": 1,
+    "Studio Ghibli anime style, han": 1
+  },
+  "content_types": {
+    "live_action": 14,
+    "animation": 8
+  }
+}

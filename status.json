@@ -1,3 +1,9 @@
 {
-  "current_style_index": 3
+  "current_content_index": 0,
+  "current_style_index": 2,
+  "current_theme_category": "lifestyle",
+  "step": "generate_videos",
+  "scene_idx": 0,
+  "total_scenes": 6,
+  "timestamp": "2025-09-10T20:58:31.411558"
 }
