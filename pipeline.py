@@ -51,7 +51,10 @@ async def generate_story(provider="qwen"):
         print("⚠️ content_config.json not found, using defaults")
         config = {
             "content_preferences": {"animation_weight": 0.6, "live_action_weight": 0.4},
-            "style_rotation": {"animation_styles": [], "live_action_styles": []},
+            "style_rotation": {
+                "animation_styles": ["Pixar 3D animation style, realistic textures, cinematic lighting"],
+                "live_action_styles": ["Cinematic film style, professional cinematography, dramatic lighting"]
+            },
             "theme_categories": {"lifestyle": ["general content"]}
         }
     
@@ -81,19 +84,23 @@ async def generate_story(provider="qwen"):
     else:
         chosen_style = live_action_styles[current_style_index % len(live_action_styles)]
     
-    # Rotate theme category
+    # Rotate theme category independently
     theme_keys = list(theme_categories.keys())
-    current_theme_key = theme_keys[current_content_index % len(theme_keys)]
+    current_theme_index = status.get("current_theme_index", 0)
+    current_theme_key = theme_keys[current_theme_index % len(theme_keys)]
     themes = theme_categories[current_theme_key]
     
     # Update indices for next run
     next_content_index = (current_content_index + 1) % len(content_types)
-    next_style_index = (current_style_index + 1) % 9  # Max styles available
+    max_styles = len(animation_styles) if content_type == "animation" else len(live_action_styles)
+    next_style_index = (current_style_index + 1) % max_styles
+    next_theme_index = (current_theme_index + 1) % len(theme_keys)
     
     # Save updated status
     status = {
         "current_content_index": next_content_index,
         "current_style_index": next_style_index,
+        "current_theme_index": next_theme_index,
         "current_theme_category": current_theme_key
     }
     with open(status_file, "w") as f:
@@ -108,13 +115,19 @@ async def generate_story(provider="qwen"):
 You are a viral YouTube Shorts creator. Create diverse, engaging content that avoids repetitive themes.
 
 🎯 CONTENT VARIETY - Choose ONE theme from: {', '.join(themes)}
-AVOID: Overused pet/coffee content. Be creative and original!
+AVOID: AI themes, robots, technology dystopia, overused pet/coffee content. Focus on realistic, relatable content!
 
 📈 VIRAL ELEMENTS:
 - Strong hook in first 3 seconds
 - Clear value proposition or entertainment
+- Realistic scenarios and characters
 - Surprising twist or reveal
 - Call-to-action ending
+
+REQUIREMENTS:
+- NO AI themes, robots, or futuristic technology
+- Focus on realistic human experiences
+- Use believable scenarios and situations
 
 STYLE: {chosen_style}
 
@@ -148,6 +161,11 @@ You are a viral YouTube Shorts creator. Create engaging LIVE-ACTION content.
 - Before/after transformations
 - Relatable situations
 - Clear educational or entertainment value
+
+REQUIREMENTS:
+- NO AI themes, robots, or unrealistic technology
+- Focus on genuine human experiences
+- Use practical, achievable scenarios
 
 STYLE: {chosen_style}
 

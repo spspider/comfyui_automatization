@@ -1,66 +1,6 @@
 {
   "videos": [
     {
-      "timestamp": "2025-09-11T04:49:16.550414",
-      "theme": "unknown",
-      "content_type": "animation",
-      "style": "Pixar 3D animation style, realistic textures, cine"
-    },
-    {
-      "timestamp": "2025-09-11T06:16:59.739559",
-      "theme": "unknown",
-      "content_type": "animation",
-      "style": "Disney 3D animation style, vibrant colors, magical"
-    },
-    {
-      "timestamp": "2025-09-11T07:51:37.659727",
-      "theme": "unknown",
-      "content_type": "animation",
-      "style": "Studio Ghibli anime style, hand-drawn animation, w"
-    },
-    {
-      "timestamp": "2025-09-11T09:30:42.197096",
-      "theme": "unknown",
-      "content_type": "live_action",
-      "style": "Music video style, dynamic lighting, creative angl"
-    },
-    {
-      "timestamp": "2025-09-11T11:00:39.630484",
-      "theme": "unknown",
-      "content_type": "live_action",
-      "style": "Cyberpunk style, neon lights, futuristic cityscape"
-    },
-    {
-      "timestamp": "2025-09-11T11:02:13.067429",
-      "theme": "tech",
-      "content_type": "live_action",
-      "style": "Claymation stop-motion, tactile textures, handcraf"
-    },
-    {
-      "timestamp": "2025-09-11T12:41:14.249571",
-      "theme": "unknown",
-      "content_type": "animation",
-      "style": "Disney 3D animation style, vibrant colors, magical"
-    },
-    {
-      "timestamp": "2025-09-11T14:18:00.814229",
-      "theme": "unknown",
-      "content_type": "animation",
-      "style": "Studio Ghibli anime style, hand-drawn animation, w"
-    },
-    {
-      "timestamp": "2025-09-11T15:57:05.633139",
-      "theme": "unknown",
-      "content_type": "live_action",
-      "style": "Cyberpunk style, neon lights, futuristic cityscape"
-    },
-    {
-      "timestamp": "2025-09-11T15:58:30.680413",
-      "theme": "tech",
-      "content_type": "live_action",
-      "style": "Claymation stop-motion, tactile textures, handcraf"
-    },
-    {
       "timestamp": "2025-09-11T17:34:49.831193",
       "theme": "unknown",
       "content_type": "live_action",
@@ -119,15 +59,76 @@
       "theme": "unknown",
       "content_type": "live_action",
       "style": "Music video style, dynamic lighting, creative angl"
+    },
+    {
+      "timestamp": "2025-09-13T09:31:56.840465",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-13T14:07:41.633880",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-13T14:13:03.913209",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-13T15:04:25.268442",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-13T15:06:25.571168",
+      "theme": "creative",
+      "content_type": "animation",
+      "style": "Pixar 3D animation style, realistic textures, smoo"
+    },
+    {
+      "timestamp": "2025-09-13T16:32:44.257768",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "Documentary style, natural lighting, handheld came"
+    },
+    {
+      "timestamp": "2025-09-13T18:06:35.665300",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "DreamWorks 3D animation style, realistic character"
+    },
+    {
+      "timestamp": "2025-09-13T19:35:01.986012",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Illumination Studios 3D animation style, colorful "
+    },
+    {
+      "timestamp": "2025-09-13T21:00:38.565106",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "Blue Sky Studios 3D animation style, realistic fur"
+    },
+    {
+      "timestamp": "2025-09-13T21:02:48.996222",
+      "theme": "creative",
+      "content_type": "animation",
+      "style": "DreamWorks 3D animation style, realistic character"
     }
   ],
   "themes": {
-    "unknown": 30,
+    "unknown": 35,
     "tech": 12,
-    "lifestyle": 5
+    "lifestyle": 8,
+    "creative": 2
   },
   "styles": {
-    "unknown": 9,
+    "unknown": 13,
     "Commercial style, bright light": 3,
     "Cartoon Network style, bold ou": 1,
     "Fantasy style, ethereal lighti": 2,
@@ -136,17 +137,20 @@
     "Realistic CGI animation, photo": 3,
     "Modern minimalist style, clean": 2,
     "Claymation stop-motion, tactil": 4,
-    "Pixar 3D animation style, real": 4,
+    "Pixar 3D animation style, real": 5,
     "Social media style, trendy fil": 1,
     "Studio Ghibli anime style, han": 3,
-    "Documentary style, natural lig": 1,
+    "Documentary style, natural lig": 2,
     "Vlog style, casual lighting, p": 1,
     "Minimalist flat design, clean ": 1,
     "Music video style, dynamic lig": 3,
-    "Cyberpunk style, neon lights, ": 2
+    "Cyberpunk style, neon lights, ": 2,
+    "DreamWorks 3D animation style,": 2,
+    "Illumination Studios 3D animat": 1,
+    "Blue Sky Studios 3D animation ": 1
   },
   "content_types": {
-    "live_action": 32,
-    "animation": 15
+    "live_action": 37,
+    "animation": 20
   }
 }

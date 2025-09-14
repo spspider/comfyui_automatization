@@ -1,9 +1,10 @@
 {
   "current_content_index": 0,
-  "current_style_index": 7,
-  "current_theme_category": "lifestyle",
+  "current_style_index": 2,
+  "current_theme_index": 6,
+  "current_theme_category": "psychology",
   "step": "generate_videos",
-  "scene_idx": 0,
+  "scene_idx": 2,
   "total_scenes": 6,
-  "timestamp": "2025-09-12T22:44:36.387837"
+  "timestamp": "2025-09-13T21:32:30.299537"
 }

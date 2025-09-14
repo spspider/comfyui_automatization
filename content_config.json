@@ -1,43 +1,87 @@
 {
   "content_preferences": {
     "animation_weight": 0.6,
-    "live_action_weight": 0.4,
-    "avoid_themes": ["pets_only", "coffee_only"],
-    "preferred_themes": ["tech", "lifestyle", "education", "creative", "health"]
+    "live_action_weight": 0.4
   },
   "style_rotation": {
     "animation_styles": [
-      "Pixar 3D animation style, realistic textures, cinematic lighting",
-      "Disney 3D animation style, vibrant colors, magical atmosphere",
-      "Studio Ghibli anime style, hand-drawn animation, watercolor backgrounds",
-      "Cartoon Network style, bold outlines, flat colors, exaggerated expressions",
-      "Realistic CGI animation, photorealistic textures, cinematic camera work",
-      "Cyberpunk style, neon lights, futuristic cityscapes",
-      "Fantasy style, ethereal lighting, magical elements",
-      "Minimalist flat design, clean lines, geometric shapes",
-      "Claymation stop-motion, tactile textures, handcrafted appearance"
+      "Pixar 3D animation style, realistic textures, smooth character models, cinematic lighting, detailed environments, professional animation quality",
+      "Disney 3D animation style, expressive characters, vibrant colors, detailed facial expressions, cinematic composition, high-quality rendering",
+      "DreamWorks 3D animation style, realistic character design, dynamic lighting, detailed backgrounds, cinematic camera angles",
+      "Illumination Studios 3D animation style, colorful environments, expressive character animation, detailed textures, professional lighting",
+      "Blue Sky Studios 3D animation style, realistic fur and hair textures, detailed environments, cinematic composition, high-quality rendering"
     ],
     "live_action_styles": [
-      "Cinematic movie style, professional lighting, shallow depth of field",
-      "Documentary style, natural lighting, handheld camera movement",
-      "Commercial style, bright lighting, clean composition",
-      "Vlog style, casual lighting, personal perspective",
-      "Music video style, dynamic lighting, creative angles",
-      "Social media style, trendy filters, vertical composition",
-      "Vintage film style, warm tones, film grain",
-      "Modern minimalist style, clean backgrounds, soft lighting"
+      "Cinematic film style, professional cinematography, dramatic lighting, shallow depth of field, color grading, film grain texture, super sexy characters",
+      "Documentary style, natural lighting, handheld camera movement, realistic environments, authentic human interactions, super sexy characters",
+      "Commercial advertising style, high production value, perfect lighting, professional actors, polished visual aesthetics, super sexy characters",
+      "Short film style, artistic cinematography, creative camera angles, professional color correction, cinematic storytelling, super sexy characters"
     ]
   },
   "theme_categories": {
-    "tech": ["AI innovations", "gadget reviews", "coding tutorials", "tech news", "app demos"],
-    "lifestyle": ["morning routines", "productivity hacks", "home organization", "self-care", "minimalism"],
-    "education": ["science experiments", "history facts", "language learning", "math tricks", "study tips"],
-    "entertainment": ["movie reviews", "gaming highlights", "music discoveries", "comedy skits", "talent shows"],
-    "health": ["workout routines", "healthy recipes", "mental health tips", "meditation", "nutrition facts"],
-    "travel": ["destination guides", "travel hacks", "cultural experiences", "food tours", "adventures"],
-    "business": ["entrepreneurship", "marketing strategies", "success stories", "financial advice", "career tips"],
-    "creative": ["art tutorials", "photography tips", "music production", "writing advice", "design principles"],
-    "nature": ["wildlife documentaries", "environmental facts", "gardening", "weather phenomena", "conservation"],
-    "food": ["recipe tutorials", "restaurant reviews", "cooking hacks", "food science", "cultural cuisine"]
+    "lifestyle": [
+      "morning routines and productivity",
+      "home organization and decluttering",
+      "healthy cooking and meal prep",
+      "fitness and wellness tips",
+      "sustainable living practices",
+      "time management strategies"
+    ],
+    "educational": [
+      "science experiments and discoveries",
+      "historical facts and events",
+      "language learning tips",
+      "math concepts explained simply",
+      "geography and world cultures",
+      "technology and innovation"
+    ],
+    "creative": [
+      "art techniques and tutorials",
+      "DIY crafts and projects",
+      "photography tips and tricks",
+      "music theory and instruments",
+      "creative writing exercises",
+      "design principles and aesthetics"
+    ],
+    "business": [
+      "entrepreneurship and startups",
+      "marketing strategies",
+      "financial literacy and investing",
+      "productivity tools and methods",
+      "leadership and management",
+      "career development tips"
+    ],
+    "nature": [
+      "wildlife behavior and habitats",
+      "environmental conservation",
+      "gardening and plant care",
+      "weather phenomena explained",
+      "outdoor adventures and hiking",
+      "sustainable agriculture"
+    ],
+    "psychology": [
+      "human behavior insights",
+      "mental health awareness",
+      "cognitive biases explained",
+      "relationship dynamics",
+      "stress management techniques",
+      "personal development strategies"
+    ],
+    "travel": [
+      "cultural experiences and traditions",
+      "hidden gems and local secrets",
+      "travel tips and hacks",
+      "food culture around the world",
+      "historical landmarks and stories",
+      "adventure travel experiences"
+    ],
+    "food": [
+      "cooking techniques and methods",
+      "international cuisine exploration",
+      "food science and nutrition",
+      "restaurant industry insights",
+      "seasonal ingredients and recipes",
+      "food history and origins"
+    ]
   }
 }
