@@ -1,12 +1,6 @@
 {
   "videos": [
     {
-      "timestamp": "2025-09-17T21:09:24.216022",
-      "theme": "business",
-      "content_type": "live_action",
-      "style": "Short film style, artistic cinematography, creativ"
-    },
-    {
       "timestamp": "2025-09-17T21:09:30.179849",
       "theme": "travel",
       "content_type": "animation",
@@ -119,12 +113,18 @@
       "theme": "unknown",
       "content_type": "live_action",
       "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-18T14:11:34.738486",
+      "theme": "lifestyle",
+      "content_type": "live_action",
+      "style": "unknown"
     }
   ],
   "themes": {
     "unknown": 51,
     "tech": 12,
-    "lifestyle": 884,
+    "lifestyle": 885,
     "creative": 883,
     "psychology": 878,
     "food": 875,
@@ -134,7 +134,7 @@
     "nature": 874
   },
   "styles": {
-    "unknown": 26,
+    "unknown": 27,
     "Commercial style, bright light": 3,
     "Cartoon Network style, bold ou": 1,
     "Fantasy style, ethereal lighti": 2,
@@ -159,7 +159,7 @@
     "Cinematic film style, professi": 2
   },
   "content_types": {
-    "live_action": 3549,
+    "live_action": 3550,
     "animation": 3527
   }
 }

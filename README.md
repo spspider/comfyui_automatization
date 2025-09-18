@@ -268,4 +268,4 @@ If this project helps you create amazing content, consider supporting its develo
 
 ⭐ **Star this repository** if it helped you create amazing AI videos!
 
-Made with ❤️ by [Your Name]
+[Buy me  coffe friend!](https://buymeacoffee.com/ecologic)
