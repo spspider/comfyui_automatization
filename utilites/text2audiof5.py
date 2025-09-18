@@ -202,13 +202,13 @@ def run_speecht5_tts(language, gen_text, output_file, ref_audio=None, ref_text=N
     return output_file
 
 async def main():
-    # Пример для русского
-    # output_path = run_f5_tts(
-    #     language="ru",
-    #     gen_text="Текст для генерации на русском с удар+ениями",
-    #     output_file=r"C:\AI\comfyui_automatization\result\output_ru.wav"
-    # )
-    # print(f"Generated audio saved to: {output_path}")
+    #Пример для русского
+    output_path = run_f5_tts(
+        language="ru",
+        gen_text="Текст для генерации на русском с удар+ениями",
+        output_file=r"C:\AI\comfyui_automatization\result\output_ru.wav"
+    )
+    print(f"Generated audio saved to: {output_path}")
     
     # # # Пример для английского
     # output_path = run_f5_tts(

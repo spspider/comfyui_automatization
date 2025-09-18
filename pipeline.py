@@ -18,7 +18,7 @@ from utilites.text2audiof5 import run_f5_tts, run_speecht5_tts
 from provider_all import generate_response_allmy
 from workflow_run.run_t2v_wan22 import run_text2video
 from workflow_run.text_to_video_wan_api_nouugf_wf import text_to_video_wan_api_nouugf
-from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename, create_youtube_csv, message_to_me
+from utilites.utilites import reduce_audio_volume, clear_vram, sanitize_filename, create_youtube_csv, message_to_me, add_russian_stress
 from workflow_run.video2audio_workflow import run_video2audio
 from workflow_run.wan_2_1_t2v_gguf_api import wan_2_1_t2v_gguf_api
 from utilites.argotranslate import translateTextBlocks, translate_meta
@@ -568,10 +568,15 @@ async def main_production():
     vids = list_files_in_result("scene_*_audio.mp4","result") 
 
     blocks = translateTextBlocks(blocks, [lang for lang in LANGUAGES if lang != "en"])  # 3. переводим текст с английского на другие языки
+    
     # here we can create different languages
     original_vids = vids.copy()  # Keep original video list
     for language in LANGUAGES:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
+    # Добавляем ударения для русского языка
+    for block in blocks:
+        if "ru" in block["text"]:
+            block["text"]["ru"] = add_russian_stress(block["text"]["ru"])
     clear_vram()
     # Generate TTS for all languages
     for language in LANGUAGES:
@@ -667,6 +672,11 @@ async def main_test():
     print(f"Parsed {len(blocks)} scenes.")
     blocks = clean_text_captions(blocks)  # 2. очищаем текст от лишних символов
     blocks = translateTextBlocks(blocks, [lang for lang in LANGUAGES if lang != "en"])  # 3. переводим текст на английский
+    
+    # Добавляем ударения для русского языка
+    for block in blocks:
+        if "ru" in block["text"]:
+            block["text"]["ru"] = add_russian_stress(block["text"]["ru"])
     print("Starting test pipeline...")
 ###### DO NOT DELETE BLOCK ABOVE ######
    
