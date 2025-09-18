@@ -1,36 +1,6 @@
 {
   "videos": [
     {
-      "timestamp": "2025-09-17T21:09:30.179849",
-      "theme": "travel",
-      "content_type": "animation",
-      "style": "DreamWorks 3D animation style, realistic character"
-    },
-    {
-      "timestamp": "2025-09-17T21:09:36.358404",
-      "theme": "educational",
-      "content_type": "live_action",
-      "style": "Documentary style, natural lighting, handheld came"
-    },
-    {
-      "timestamp": "2025-09-17T21:09:42.321947",
-      "theme": "nature",
-      "content_type": "animation",
-      "style": "Pixar 3D animation style, realistic textures, smoo"
-    },
-    {
-      "timestamp": "2025-09-17T21:09:48.595737",
-      "theme": "food",
-      "content_type": "live_action",
-      "style": "Short film style, artistic cinematography, creativ"
-    },
-    {
-      "timestamp": "2025-09-17T21:09:54.604333",
-      "theme": "creative",
-      "content_type": "animation",
-      "style": "DreamWorks 3D animation style, realistic character"
-    },
-    {
       "timestamp": "2025-09-17T21:10:00.528463",
       "theme": "psychology",
       "content_type": "live_action",
@@ -119,13 +89,43 @@
       "theme": "lifestyle",
       "content_type": "live_action",
       "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-18T15:25:05.249079",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-18T16:28:10.524223",
+      "theme": "unknown",
+      "content_type": "animation",
+      "style": "DreamWorks 3D animation style, realistic character"
+    },
+    {
+      "timestamp": "2025-09-18T17:32:43.140916",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "Cinematic film style, professional cinematography,"
+    },
+    {
+      "timestamp": "2025-09-18T19:06:05.446344",
+      "theme": "creative",
+      "content_type": "live_action",
+      "style": "unknown"
+    },
+    {
+      "timestamp": "2025-09-18T19:44:37.842293",
+      "theme": "unknown",
+      "content_type": "live_action",
+      "style": "unknown"
     }
   ],
   "themes": {
-    "unknown": 51,
+    "unknown": 55,
     "tech": 12,
     "lifestyle": 885,
-    "creative": 883,
+    "creative": 884,
     "psychology": 878,
     "food": 875,
     "business": 873,
@@ -134,7 +134,7 @@
     "nature": 874
   },
   "styles": {
-    "unknown": 27,
+    "unknown": 30,
     "Commercial style, bright light": 3,
     "Cartoon Network style, bold ou": 1,
     "Fantasy style, ethereal lighti": 2,
@@ -151,15 +151,15 @@
     "Minimalist flat design, clean ": 1,
     "Music video style, dynamic lig": 3,
     "Cyberpunk style, neon lights, ": 2,
-    "DreamWorks 3D animation style,": 1752,
+    "DreamWorks 3D animation style,": 1753,
     "Illumination Studios 3D animat": 3,
     "Blue Sky Studios 3D animation ": 1,
     "Short film style, artistic cin": 1749,
     "Disney 3D animation style, exp": 5,
-    "Cinematic film style, professi": 2
+    "Cinematic film style, professi": 3
   },
   "content_types": {
-    "live_action": 3550,
-    "animation": 3527
+    "live_action": 3554,
+    "animation": 3528
   }
 }
