@@ -217,10 +217,10 @@ If this project helps you create amazing content, consider supporting its develo
 
 | Platform | Link | Description |
 |----------|------|-------------|
-| 💳 **PayPal** | [Donate via PayPal](https://paypal.me/yourpaypal) | One-time or recurring |
-| ☕ **Buy Me a Coffee** | [buymeacoffee.com/yourname](https://buymeacoffee.com/yourname) | Support with coffee |
-| 🪙 **Crypto** | `your-crypto-address` | Bitcoin/Ethereum |
-| 💎 **GitHub Sponsors** | [Sponsor on GitHub](https://github.com/sponsors/yourusername) | Monthly sponsorship |
+<!-- | 💳 **PayPal** | [Donate via PayPal](https://paypal.me/yourpaypal) | One-time or recurring | -->
+| ☕ **Buy Me a Coffee** | [buymeacoffee.com/ecologic](https://buymeacoffee.com/ecologic) | Support with coffee |
+<!--| 🪙 **Crypto** | `your-crypto-address` | Bitcoin/Ethereum | -->
+<!--| 💎 **GitHub Sponsors** | [Sponsor on GitHub](https://github.com/sponsors/yourusername) | Monthly sponsorship |-->
 
 ### Why Donate?
 
