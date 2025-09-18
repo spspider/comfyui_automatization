@@ -574,9 +574,9 @@ async def main_production():
     for language in LANGUAGES:
         burn_subtitles(original_vids, blocks, language)   # 2. накладываем субтитры f"{input_path.stem}_subtitled.mp4"
     # Добавляем ударения для русского языка
-    for block in blocks:
-        if "ru" in block["text"]:
-            block["text"]["ru"] = add_russian_stress(block["text"]["ru"])
+    # for block in blocks:
+    #     if "ru" in block["text"]:
+    #         block["text"]["ru"] = add_russian_stress(block["text"]["ru"])
     clear_vram()
     # Generate TTS for all languages
     for language in LANGUAGES:
